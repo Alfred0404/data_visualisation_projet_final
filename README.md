@@ -1,8 +1,15 @@
-# Project Title
+<div align="center">
+  <h1 align="center">Data Vizualisation - Projet Final</h1>
 
-<!-- TODO: Short project description -->
+  <p align="center">
+    application d’aide à la décision pour le marketing basée sur les cohortes d’acquisition, la segmentation RFM et la valeur vie client (CLV)
+    <br />
+    <a href="https://github.com/alfred0404/lightseek-ocr"><strong>Parcourir le repo »</strong></a>
+  </p>
+</div>
 
-## Table of Contents
+<details>
+<summary><strong>Table of Contents</strong> (click to expand)</summary>
 
 - [Installation](#installation)
 - [Requirements](#requirements)
@@ -20,18 +27,21 @@
 - [Acknowledgements](#acknowledgements)
 - [Contact](#contact)
 
+</details>
+
 ## Installation
 
 1. Clone the repository
     ```bash
     git clone https://github.com/alfredd0404/data_visualisation_projet_final.git
+    cd data_visualisation_projet_final
     ```
 1. Setup a virtual environnment
     ```bash
     python -m venv .venv
     .venv/Scripts/activate
     ```
-2. install required dependencies
+2. Install required dependencies
     ```bash
     pip install requirements.txt
     ```
@@ -124,3 +134,7 @@ boilerplate project structure
 ## Acknowledgements
 
 <!-- TODO: Credits and references -->
+
+<p align="center">
+	<img src="https://raw.githubusercontent.com/catppuccin/catppuccin/main/assets/footers/gray0_ctp_on_line.svg?sanitize=true" />
+</p>

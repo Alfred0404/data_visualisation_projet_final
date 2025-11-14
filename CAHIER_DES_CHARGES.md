@@ -119,3 +119,7 @@ project-root/
 - A l'adresse mail : [hatim@datascientist.fr​](mailto:hatim@datascientist.fr​)
 - Objet : PROJET ECE DATAVIZ 2025 - ING4 Data & IA - Groupe du projet 1
 - Contenu du mail : ZIP ou Lien Github + membres du groupe
+
+<p align="center">
+	<img src="https://raw.githubusercontent.com/catppuccin/catppuccin/main/assets/footers/gray0_ctp_on_line.svg?sanitize=true" />
+</p>
