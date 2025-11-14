@@ -1,0 +1,123 @@
+# Project Title
+
+<!-- TODO: Short project description -->
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Requirements](#requirements)
+- [Data](#data)
+- [Usage](#usage)
+- [Examples](#examples)
+- [Visualizations](#visualizations)
+- [Methods](#methods)
+- [Results](#results)
+- [Project structure](#project-structure)
+- [Tests](#tests)
+- [Contributing](#contributing)
+- [License](#license)
+- [Authors](#authors)
+- [Acknowledgements](#acknowledgements)
+- [Contact](#contact)
+
+## Installation
+
+1. Clone the repository
+    ```bash
+    git clone https://github.com/alfredd0404/data_visualisation_projet_final.git
+    ```
+1. Setup a virtual environnment
+    ```bash
+    python -m venv .venv
+    .venv/Scripts/activate
+    ```
+2. install required dependencies
+    ```bash
+    pip install requirements.txt
+    ```
+
+## Requirements
+
+Make sure these dependencies are installed
+
+## Data
+
+
+
+## Usage
+
+
+
+## Examples
+
+
+
+## Visualizations
+
+
+
+## Results
+
+
+
+## Project structure
+
+boilerplate project structure
+```bash
+├── README.md
+├── requirements.txt
+├── setup.py
+├── .gitignore
+├── data
+│   ├── raw/                  # original unmodified data
+│   ├── processed/            # cleaned and transformed data
+│   └── external/             # external datasets
+├── notebooks
+│   ├── 01-data-exploration.ipynb
+│   └── 02-visualizations.ipynb
+├── src
+│   ├── data
+│   │   └── make_dataset.py
+│   ├── visualization
+│   │   └── plot_utils.py
+│   ├── analysis
+│   │   └── analysis.py
+│   └── utils
+│       └── helpers.py
+├── scripts
+│   └── run_pipeline.sh
+├── outputs
+│   ├── figures/
+│   └── tables/
+├── tests
+│   ├── test_data.py
+│   └── test_viz.py
+└── docs
+    └── project_overview.md
+```
+
+## Tests
+
+<!-- TODO: How to run tests and expected results -->
+
+## License
+
+<!-- TODO: License information -->
+
+## Authors
+
+[Alfred de Vulpian](https://github.com/alfred0404)
+
+[Nicolas DONIER](https://github.com/reinod15)
+
+[Thibault GAREL](https://github.com/Thibault-GAREL)
+
+[Maxime DUTERTRE](https://github.com/madmax0978)
+
+[Alexandre GARREAU](https://github.com/AlexDreams)
+
+[Kimarjie LUCENARODRIGO](https://github.com/kimarjie)
+
+## Acknowledgements
+
+<!-- TODO: Credits and references -->
