@@ -120,8 +120,14 @@ def clean_and_cache_data(_df):
     -------
     pd.DataFrame
         DataFrame nettoyé
+
+    Notes
+    -----
+    Utilise le mode optimisé (strict_mode=False) pour conserver un maximum de données.
+    Pour les analyses nécessitant uniquement les clients avec ID (RFM, CLV, Cohortes),
+    filtrer avec df[df['HasCustomerID']].
     """
-    return utils.clean_data(_df)
+    return utils.clean_data(_df, verbose=True, strict_mode=False)
 
 
 # ==============================================================================
@@ -139,27 +145,34 @@ def render_sidebar():
     """
     with st.sidebar:
         # En-tête
-        st.title("📊 Navigation")
+        st.title("Navigation")
 
         # Informations sur les données
         if st.session_state.data_loaded:
-            st.success("✅ Données chargées")
+            st.success("Données chargées")
 
             if st.session_state.df_clean is not None:
+                df = st.session_state.df_clean
+                # Compter les clients avec ID (exclure les NaN)
+                clients_with_id = df[df['HasCustomerID']]['Customer ID'].nunique()
+                total_trans = len(df)
+                trans_with_client = len(df[df['HasCustomerID']])
+
                 st.info(f"""
                 **Données disponibles:**
-                - {len(st.session_state.df_clean):,} transactions
-                - {st.session_state.df_clean['Customer ID'].nunique():,} clients
-                - Période: {st.session_state.df_clean['InvoiceDate'].min().strftime('%Y-%m-%d')}
-                  à {st.session_state.df_clean['InvoiceDate'].max().strftime('%Y-%m-%d')}
+                - {total_trans:,} transactions totales
+                - {trans_with_client:,} avec Customer ID ({(trans_with_client/total_trans)*100:.1f}%)
+                - {clients_with_id:,} clients uniques
+                - Période: {df['InvoiceDate'].min().strftime('%Y-%m-%d')}
+                  à {df['InvoiceDate'].max().strftime('%Y-%m-%d')}
                 """)
         else:
-            st.warning("⚠️ Données non chargées")
+            st.warning("Données non chargées")
 
         st.divider()
 
         # Filtres globaux
-        st.subheader("🎯 Filtres globaux")
+        st.subheader("Filtres globaux")
 
         if st.session_state.data_loaded and st.session_state.df_clean is not None:
             df_clean = st.session_state.df_clean
@@ -201,9 +214,9 @@ def render_sidebar():
         st.divider()
 
         # Actions
-        st.subheader("⚙️ Actions")
+        st.subheader("Actions")
 
-        if st.button("🔄 Recharger les données", use_container_width=True):
+        if st.button("Recharger les données", use_container_width=True):
             st.cache_data.clear()
             st.session_state.data_loaded = False
             st.rerun()
@@ -237,50 +250,50 @@ def render_home_page():
     col1, col2 = st.columns([2, 1])
 
     with col1:
-        st.header("🎯 Objectifs de l'application")
+        st.header("Objectifs de l'application")
         st.markdown("""
         Cette application d'aide à la décision marketing vous permet de :
 
-        1. **Analyser les cohortes d'acquisition** 📊
+        1. **Analyser les cohortes d'acquisition**
            - Suivre l'évolution des cohortes de clients dans le temps
            - Calculer les taux de rétention par cohorte
            - Identifier les périodes d'acquisition les plus performantes
 
-        2. **Segmenter vos clients avec RFM** 🎯
+        2. **Segmenter vos clients avec RFM**
            - Segmentation basée sur Récence, Fréquence et Montant
            - Identification des clients à forte valeur
            - Priorisation des actions marketing
 
-        3. **Calculer la Customer Lifetime Value** 💰
+        3. **Calculer la Customer Lifetime Value**
            - CLV empirique basée sur les cohortes
            - CLV prédictive avec formules
            - Optimisation de la valeur client
 
-        4. **Simuler des scénarios marketing** 🔬
+        4. **Simuler des scénarios marketing**
            - Impact de l'amélioration de la rétention
            - Effet de l'augmentation du panier moyen
            - Projection des revenus futurs
 
-        5. **Exporter vos analyses** 📤
+        5. **Exporter vos analyses**
            - Export des données en CSV
            - Export des graphiques en PNG
            - Rapports personnalisés
         """)
 
     with col2:
-        st.header("🗺️ Navigation")
+        st.header("Navigation")
         st.markdown("""
         Utilisez le menu de gauche pour naviguer entre les différentes pages :
 
-        - **🏠 Overview** : Vue d'ensemble et KPIs
-        - **📊 Cohortes** : Analyse des cohortes
-        - **🎯 Segments** : Segmentation RFM
-        - **🔬 Scénarios** : Simulations
-        - **📤 Export** : Exports et rapports
+        - **Overview** : Vue d'ensemble et KPIs
+        - **Cohortes** : Analyse des cohortes
+        - **Segments** : Segmentation RFM
+        - **Scénarios** : Simulations
+        - **Export** : Exports et rapports
         """)
 
         st.info("""
-        **💡 Astuce**
+        **Astuce**
 
         Utilisez les filtres globaux dans la barre latérale pour affiner
         vos analyses sur toutes les pages.
@@ -290,7 +303,7 @@ def render_home_page():
 
     # KPIs globaux (si données chargées)
     if st.session_state.data_loaded and st.session_state.df_clean is not None:
-        st.header("📈 Vue d'ensemble rapide")
+        st.header("Vue d'ensemble rapide")
 
         kpis = utils.calculate_kpis(st.session_state.df_clean)
         st.session_state.kpis = kpis
@@ -327,23 +340,23 @@ def render_home_page():
 
 
     else:
-        st.warning("⚠️ Chargez les données pour voir les KPIs globaux")
+        st.warning("Chargez les données pour voir les KPIs globaux")
 
         # Bouton pour charger les données
-        if st.button("📂 Charger les données", type="primary"):
+        if st.button("Charger les données", type="primary"):
             with st.spinner("Chargement et nettoyage des données..."):
                 try:
-                    df_raw = load_and_cache_data(config.RAW_DATA_CSV)
+                    df_raw = load_and_cache_data(config.RAW_DATA_XLSX)
                     st.session_state.df_raw = df_raw
-                    
+
                     df_clean = clean_and_cache_data(df_raw)
                     st.session_state.df_clean = df_clean
-                    
+
                     st.session_state.data_loaded = True
                     st.success("Données chargées et nettoyées avec succès !")
                     st.rerun()
                 except FileNotFoundError:
-                    st.error(f"Erreur : Le fichier de données brutes '{config.RAW_DATA_CSV}' est introuvable.")
+                    st.error(f"Erreur : Le fichier de données brutes '{config.RAW_DATA_XLSX}' est introuvable.")
                 except Exception as e:
                     st.error(f"Une erreur est survenue lors du chargement des données : {e}")
 
@@ -351,7 +364,7 @@ def render_home_page():
     st.divider()
 
     # Guide de démarrage rapide
-    with st.expander("📖 Guide de démarrage rapide", expanded=False):
+    with st.expander("Guide de démarrage rapide", expanded=False):
         st.markdown("""
         ### Comment utiliser cette application ?
 
@@ -383,7 +396,7 @@ def render_home_page():
     # Footer
     st.divider()
     st.caption("""
-    📊 Application d'Aide à la Décision Marketing |
+    Application d'Aide à la Décision Marketing |
     Données : Online Retail II Dataset |
     Développé avec Streamlit
     """)
