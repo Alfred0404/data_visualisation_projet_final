@@ -20,10 +20,7 @@ import config
 import utils
 
 
-# ==============================================================================
 # CONFIGURATION DE LA PAGE
-# ==============================================================================
-
 st.set_page_config(
     page_title="Export - Marketing Analytics",
     page_icon=":material/upload:",
@@ -31,10 +28,7 @@ st.set_page_config(
 )
 
 
-# ==============================================================================
 # HELPER FUNCTIONS
-# ==============================================================================
-
 def get_file_size(df):
     """Calculate the approximate file size in MB"""
     size_bytes = df.memory_usage(deep=True).sum()
@@ -83,10 +77,7 @@ def create_zip_archive(files_dict):
     return zip_buffer.getvalue()
 
 
-# ==============================================================================
 # EN-TETE DE LA PAGE
-# ==============================================================================
-
 st.title("Export et Téléchargements")
 st.markdown("""
 Exportez vos analyses, visualisations et rapports dans différents formats
@@ -96,19 +87,13 @@ pour les partager ou les intégrer à vos présentations.
 st.divider()
 
 
-# ==============================================================================
 # VERIFICATION DES DONNEES
-# ==============================================================================
-
 if not st.session_state.get('data_loaded', False):
     st.warning("Veuillez d'abord charger les données depuis la page d'accueil.")
     st.stop()
 
 
-# ==============================================================================
 # EXPORTS DE DONNEES
-# ==============================================================================
-
 st.header("Export des Données")
 
 st.markdown("""
@@ -117,15 +102,17 @@ Exportez les datasets traités et les résultats d'analyses au format CSV ou Exc
 
 tab1, tab2, tab3, tab4 = st.tabs(["Données nettoyées", "Analyse RFM", "Analyse Cohortes", "Export groupé"])
 
-# ==============================================================================
 # TAB 1: Données nettoyées
-# ==============================================================================
-
 with tab1:
     st.subheader("Données brutes nettoyées")
 
     # Get data from session state
     df_clean = st.session_state.get('df_clean', pd.DataFrame())
+
+    # Appliquer les filtres globaux
+    if not df_clean.empty:
+        active_filters = st.session_state.get('active_filters', {})
+        df_clean = utils.apply_global_filters(df_clean, active_filters)
 
     if not df_clean.empty:
         st.markdown(f"""
@@ -186,10 +173,7 @@ with tab1:
         st.info("Aucune donnée nettoyée disponible")
 
 
-# ==============================================================================
 # TAB 2: Analyse RFM
-# ==============================================================================
-
 with tab2:
     st.subheader("Analyse RFM")
 
@@ -260,10 +244,7 @@ with tab2:
         st.info("Aucune analyse RFM disponible. Veuillez d'abord accéder à la page Segments.")
 
 
-# ==============================================================================
 # TAB 3: Analyse Cohortes
-# ==============================================================================
-
 with tab3:
     st.subheader("Analyse des Cohortes")
 
@@ -326,10 +307,7 @@ with tab3:
         st.info("Aucune analyse de cohortes disponible. Veuillez d'abord accéder à la page Cohortes.")
 
 
-# ==============================================================================
 # TAB 4: Export groupé
-# ==============================================================================
-
 with tab4:
     st.subheader("Export groupé (ZIP)")
 
@@ -432,10 +410,7 @@ with tab4:
 st.divider()
 
 
-# ==============================================================================
 # VISUALISATIONS
-# ==============================================================================
-
 st.header("Export des Visualisations")
 
 st.markdown("""
@@ -454,10 +429,7 @@ st.info("""
 st.divider()
 
 
-# ==============================================================================
 # INFORMATIONS ET AIDE
-# ==============================================================================
-
 st.header("Informations et Aide")
 
 col1, col2 = st.columns(2)
@@ -501,15 +473,17 @@ with col2:
 st.divider()
 
 
-# ==============================================================================
 # STATISTIQUES D'EXPORT
-# ==============================================================================
-
 st.header("Statistiques")
 
 col1, col2, col3 = st.columns(3)
 
 df_clean = st.session_state.get('df_clean', pd.DataFrame())
+# Appliquer les filtres globaux aux statistiques
+if not df_clean.empty:
+    active_filters = st.session_state.get('active_filters', {})
+    df_clean = utils.apply_global_filters(df_clean, active_filters)
+
 df_rfm = st.session_state.get('df_rfm', pd.DataFrame())
 df_cohorts = st.session_state.get('df_cohorts', pd.DataFrame())
 
@@ -543,9 +517,6 @@ with col3:
     st.metric("Lignes de données", f"{total_rows:,}")
 
 
-# ==============================================================================
 # FOOTER
-# ==============================================================================
-
 st.divider()
 st.caption("Page Export - Dernière mise à jour : " + datetime.now().strftime("%Y-%m-%d %H:%M"))

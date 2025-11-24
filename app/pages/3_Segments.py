@@ -21,10 +21,7 @@ import config
 import utils
 
 
-# ==============================================================================
 # FONCTIONS AUXILIAIRES
-# ==============================================================================
-
 @st.cache_data
 def calculate_rfm_cached(df: pd.DataFrame) -> pd.DataFrame:
     """Calcule RFM avec cache pour optimiser les performances."""
@@ -173,10 +170,7 @@ def create_segment_color_map():
     }
 
 
-# ==============================================================================
 # CONFIGURATION DE LA PAGE
-# ==============================================================================
-
 st.set_page_config(
     page_title="Segmentation RFM - Marketing Analytics",
     page_icon=":material/target:",
@@ -184,10 +178,7 @@ st.set_page_config(
 )
 
 
-# ==============================================================================
 # EN-TETE DE LA PAGE
-# ==============================================================================
-
 st.title("Segmentation RFM")
 st.markdown("""
 La segmentation RFM (Recency, Frequency, Monetary) permet d'identifier
@@ -197,10 +188,7 @@ les clients les plus précieux et de personnaliser les stratégies marketing.
 st.divider()
 
 
-# ==============================================================================
 # EXPLICATION RFM
-# ==============================================================================
-
 with st.expander("Comprendre la méthodologie RFM", expanded=False):
     st.markdown("""
     ### Qu'est-ce que le RFM ?
@@ -238,10 +226,7 @@ with st.expander("Comprendre la méthodologie RFM", expanded=False):
 st.divider()
 
 
-# ==============================================================================
 # FILTRES SPECIFIQUES
-# ==============================================================================
-
 with st.sidebar:
     st.subheader("Filtres - RFM")
 
@@ -254,24 +239,22 @@ with st.sidebar:
     st.divider()
 
 
-# ==============================================================================
 # VERIFICATION DES DONNEES
-# ==============================================================================
-
 if not st.session_state.get('data_loaded', False):
     st.warning("Veuillez d'abord charger les données depuis la page d'accueil.")
     st.stop()
 
 
-# ==============================================================================
 # CALCUL RFM
-# ==============================================================================
-
 st.header("Calcul des Scores RFM")
 
 df = st.session_state.get('df_clean', None)
 
 if df is not None:
+    # Appliquer les filtres globaux
+    active_filters = st.session_state.get('active_filters', {})
+    df = utils.apply_global_filters(df, active_filters)
+
     try:
         # Calculer RFM avec cache
         with st.spinner("Calcul des scores RFM en cours..."):
@@ -331,10 +314,7 @@ else:
 st.divider()
 
 
-# ==============================================================================
 # DISTRIBUTION DES SEGMENTS
-# ==============================================================================
-
 st.header("Distribution des Segments")
 
 col1, col2 = st.columns([2, 1])
@@ -395,10 +375,7 @@ with col2:
 st.divider()
 
 
-# ==============================================================================
 # MATRICE RFM
-# ==============================================================================
-
 st.header("Matrice RFM")
 
 st.markdown("""
@@ -469,10 +446,7 @@ else:
 st.divider()
 
 
-# ==============================================================================
 # PROFILS DETAILLES DES SEGMENTS
-# ==============================================================================
-
 st.header("Profils Détaillés des Segments")
 
 # Liste des segments disponibles
@@ -650,10 +624,7 @@ if selected_segment:
 st.divider()
 
 
-# ==============================================================================
 # TABLE COMPLETE RFM
-# ==============================================================================
-
 st.header("Tableau Complet RFM")
 
 st.markdown("""
@@ -746,10 +717,7 @@ except Exception as e:
 st.divider()
 
 
-# ==============================================================================
 # RECOMMANDATIONS PAR SEGMENT
-# ==============================================================================
-
 st.header("Recommandations Marketing par Segment")
 
 with st.expander("Stratégies recommandées", expanded=True):
@@ -782,10 +750,7 @@ with st.expander("Stratégies recommandées", expanded=True):
 st.divider()
 
 
-# ==============================================================================
 # EXPORT
-# ==============================================================================
-
 st.header("Export des Analyses RFM")
 
 col1, col2 = st.columns(2)
@@ -828,9 +793,6 @@ with col2:
     """)
 
 
-# ==============================================================================
 # FOOTER
-# ==============================================================================
-
 st.divider()
 st.caption("Page Segmentation RFM - Dernière mise à jour : " + datetime.now().strftime("%Y-%m-%d %H:%M"))

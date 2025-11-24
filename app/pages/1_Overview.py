@@ -21,10 +21,7 @@ import config
 import utils
 
 
-# ==============================================================================
 # CONFIGURATION DE LA PAGE
-# ==============================================================================
-
 st.set_page_config(
     page_title="Overview - Marketing Analytics",
     page_icon=":material/home:",
@@ -32,10 +29,7 @@ st.set_page_config(
 )
 
 
-# ==============================================================================
 # EN-TETE DE LA PAGE
-# ==============================================================================
-
 st.title("Vue d'ensemble - KPIs Marketing")
 st.markdown("""
 Cette page présente une vue synthétique de vos principaux indicateurs de performance
@@ -45,10 +39,7 @@ et l'évolution de votre activité commerciale.
 st.divider()
 
 
-# ==============================================================================
 # FILTRES SPECIFIQUES A LA PAGE
-# ==============================================================================
-
 with st.sidebar:
     st.subheader("Filtres - Overview")
 
@@ -60,24 +51,21 @@ with st.sidebar:
     st.divider()
 
 
-# ==============================================================================
 # VERIFICATION DES DONNEES
-# ==============================================================================
-
 if not st.session_state.get('data_loaded', False):
     st.warning("Veuillez d'abord charger les données depuis la page d'accueil.")
     st.stop()
 
 
-# ==============================================================================
 # KPIS PRINCIPAUX
-# ==============================================================================
-
 st.header("KPIs Principaux")
 
 df = st.session_state.get('df_clean', None)
 
 if df is not None:
+    # Appliquer les filtres globaux
+    active_filters = st.session_state.get('active_filters', {})
+    df = utils.apply_global_filters(df, active_filters)
     kpis = st.session_state.get('kpis', {})
     if not kpis:
         kpis = utils.calculate_kpis(df)
@@ -155,10 +143,7 @@ else:
 st.divider()
 
 
-# ==============================================================================
 # VISUALISATIONS PRINCIPALES
-# ==============================================================================
-
 st.header("Évolution de l'Activité")
 
 # Layout en 2 colonnes
@@ -181,10 +166,7 @@ with col2:
 st.divider()
 
 
-# ==============================================================================
 # ANALYSE PAR PAYS
-# ==============================================================================
-
 st.header("Répartition Géographique")
 
 col1, col2 = st.columns([2, 1])
@@ -205,10 +187,7 @@ with col2:
 st.divider()
 
 
-# ==============================================================================
 # ANALYSE TEMPORELLE
-# ==============================================================================
-
 st.header("Analyse Temporelle")
 
 # Tabs pour différentes analyses temporelles
@@ -482,10 +461,7 @@ with tab3:
 st.divider()
 
 
-# ==============================================================================
 # TOP PERFORMERS
-# ==============================================================================
-
 st.header("Top Performers")
 
 col1, col2 = st.columns(2)
@@ -562,10 +538,7 @@ with col2:
 st.divider()
 
 
-# ==============================================================================
 # ALERTES ET RECOMMANDATIONS
-# ==============================================================================
-
 st.header("Alertes et Recommandations")
 
 try:
@@ -632,10 +605,7 @@ except Exception as e:
 st.divider()
 
 
-# ==============================================================================
 # EXPORT
-# ==============================================================================
-
 st.header("Export")
 
 col1, col2 = st.columns(2)
@@ -684,9 +654,6 @@ with col2:
     """)
 
 
-# ==============================================================================
 # FOOTER
-# ==============================================================================
-
 st.divider()
 st.caption("Page Overview - Dernière mise à jour : " + datetime.now().strftime("%Y-%m-%d %H:%M"))

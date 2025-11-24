@@ -21,10 +21,7 @@ import config
 import utils
 
 
-# ==============================================================================
 # FONCTIONS HELPERS POUR LE CACHING
-# ==============================================================================
-
 @st.cache_data(show_spinner=False)
 def cached_create_cohorts(df: pd.DataFrame) -> pd.DataFrame:
     """Cache la creation des cohortes pour optimiser les performances."""
@@ -62,10 +59,7 @@ def cached_cohort_summary(df_cohorts: pd.DataFrame) -> pd.DataFrame:
     return summary
 
 
-# ==============================================================================
 # CONFIGURATION DE LA PAGE
-# ==============================================================================
-
 st.set_page_config(
     page_title="Analyse de Cohortes - Marketing Analytics",
     page_icon=":material/bar_chart:",
@@ -73,10 +67,7 @@ st.set_page_config(
 )
 
 
-# ==============================================================================
 # EN-TETE DE LA PAGE
-# ==============================================================================
-
 st.title("Analyse de Cohortes")
 st.markdown("""
 L'analyse de cohortes permet de suivre l'evolution de groupes de clients acquis
@@ -86,10 +77,7 @@ durant la meme periode et d'evaluer leur comportement au fil du temps.
 st.divider()
 
 
-# ==============================================================================
 # VERIFICATION DES DONNEES
-# ==============================================================================
-
 if not st.session_state.get('data_loaded', False):
     st.warning("Veuillez d'abord charger les donnees depuis la page d'accueil.")
     st.stop()
@@ -100,11 +88,11 @@ if df is None:
     st.error("Erreur lors du chargement des donnees")
     st.stop()
 
+# Appliquer les filtres globaux
+active_filters = st.session_state.get('active_filters', {})
+df = utils.apply_global_filters(df, active_filters)
 
-# ==============================================================================
 # FILTRES SPECIFIQUES
-# ==============================================================================
-
 # Filtrer les donnees avec CustomerID pour l'analyse de cohortes
 df_with_customers = df[df['HasCustomerID']].copy()
 
@@ -158,10 +146,7 @@ with st.sidebar:
     st.divider()
 
 
-# ==============================================================================
 # CREATION DES COHORTES
-# ==============================================================================
-
 st.header("Creation des Cohortes")
 
 with st.spinner("Creation des cohortes en cours..."):
@@ -217,10 +202,7 @@ with col4:
 st.divider()
 
 
-# ==============================================================================
 # HEATMAP DE RETENTION
-# ==============================================================================
-
 st.header("Heatmap de Retention")
 
 st.markdown("""
@@ -297,10 +279,7 @@ with col1:
 st.divider()
 
 
-# ==============================================================================
 # COURBES DE RETENTION
-# ==============================================================================
-
 st.header("Courbes de Retention par Cohorte")
 
 st.markdown("""
@@ -380,10 +359,7 @@ st.plotly_chart(fig_curves, use_container_width=True)
 st.divider()
 
 
-# ==============================================================================
 # ANALYSE COMPARATIVE
-# ==============================================================================
-
 st.header("Analyse Comparative des Cohortes")
 
 # Extraire les taux de retention pour M1 et M3
@@ -486,10 +462,7 @@ with col2:
 st.divider()
 
 
-# ==============================================================================
 # METRIQUES DE RETENTION
-# ==============================================================================
-
 st.header("Metriques de Retention Globales")
 
 col1, col2, col3 = st.columns(3)
@@ -532,7 +505,6 @@ with col1:
 with col2:
     st.subheader("Meilleure/Pire cohorte")
 
-    # Identifier la meilleure et pire cohorte sur la base de M3 (ou M1 si M3 indisponible)
     if len(retention_m3) > 0:
         ref_retention = retention_m3
         ref_period = "M3"
@@ -635,10 +607,7 @@ with col3:
 st.divider()
 
 
-# ==============================================================================
 # TABLE DETAILLEE DES COHORTES
-# ==============================================================================
-
 st.header("Tableau Detaille des Cohortes")
 
 st.markdown("""
@@ -732,10 +701,7 @@ st.dataframe(
 st.divider()
 
 
-# ==============================================================================
 # INSIGHTS ET RECOMMANDATIONS
-# ==============================================================================
-
 st.header("Insights et Recommandations")
 
 with st.expander("Analyse des cohortes", expanded=True):
@@ -839,10 +805,7 @@ with st.expander("Analyse des cohortes", expanded=True):
 st.divider()
 
 
-# ==============================================================================
 # EXPORT
-# ==============================================================================
-
 st.header("Export des Analyses")
 
 col1, col2, col3 = st.columns(3)
@@ -910,9 +873,6 @@ with col3:
             st.error(f"Erreur lors de l'export : {str(e)}")
 
 
-# ==============================================================================
 # FOOTER
-# ==============================================================================
-
 st.divider()
 st.caption("Page Analyse de Cohortes - Derniere mise a jour : " + datetime.now().strftime("%Y-%m-%d %H:%M"))

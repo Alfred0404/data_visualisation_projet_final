@@ -20,10 +20,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 import config
 
 
-# ==============================================================================
-# CHARGEMENT ET NETTOYAGE DES DONNEES
-# ==============================================================================
-
 def load_data(file_path: Union[str, Path], verbose: bool = False) -> pd.DataFrame:
     """
     Charge les données depuis un fichier CSV ou Excel avec optimisations pour les gros fichiers.
@@ -234,10 +230,6 @@ def clean_data(df: pd.DataFrame, verbose: bool = False, strict_mode: bool = Fals
     df_clean = df.copy()
     initial_count = len(df_clean)
 
-    # ==========================================================================
-    # ETAPE 1 : IDENTIFICATION ET MARQUAGE (PAS DE SUPPRESSION)
-    # ==========================================================================
-
     # 1.1 Identifier les lignes avec Customer ID
     df_clean['HasCustomerID'] = df_clean['Customer ID'].notna()
 
@@ -253,10 +245,6 @@ def clean_data(df: pd.DataFrame, verbose: bool = False, strict_mode: bool = Fals
         print(f"  Sans Customer ID: {(~df_clean['HasCustomerID']).sum():,} ({(~df_clean['HasCustomerID']).sum()/len(df_clean)*100:.2f}%)")
         print(f"  Retours/Annulations: {df_clean['IsReturn'].sum():,} ({df_clean['IsReturn'].sum()/len(df_clean)*100:.2f}%)")
         print(f"  Dates valides: {df_clean['HasValidDate'].sum():,} ({df_clean['HasValidDate'].sum()/len(df_clean)*100:.2f}%)")
-
-    # ==========================================================================
-    # ETAPE 2 : FILTRAGE DES DONNEES REELLEMENT INVALIDES
-    # ==========================================================================
 
     step_results = []
 
@@ -313,10 +301,6 @@ def clean_data(df: pd.DataFrame, verbose: bool = False, strict_mode: bool = Fals
         for result in step_results:
             print(result)
 
-    # ==========================================================================
-    # ETAPE 3 : ENRICHISSEMENT DES DONNEES
-    # ==========================================================================
-
     # 3.1 Calculer le montant total de chaque ligne
     df_clean['TotalAmount'] = df_clean['Quantity'] * df_clean['Price']
 
@@ -345,10 +329,6 @@ def clean_data(df: pd.DataFrame, verbose: bool = False, strict_mode: bool = Fals
 
     df_clean['Category'] = df_clean.apply(categorize_transaction, axis=1)
 
-    # ==========================================================================
-    # ETAPE 4 : ORGANISATION FINALE
-    # ==========================================================================
-
     # 4.1 Trier par date pour analyses temporelles
     df_clean = df_clean.sort_values('InvoiceDate').reset_index(drop=True)
 
@@ -372,10 +352,6 @@ def clean_data(df: pd.DataFrame, verbose: bool = False, strict_mode: bool = Fals
             cols_order.append(col)
 
     df_clean = df_clean[cols_order]
-
-    # ==========================================================================
-    # ETAPE 5 : RAPPORT FINAL
-    # ==========================================================================
 
     if verbose:
         final_count = len(df_clean)
@@ -522,10 +498,6 @@ def get_data_quality_report(df: pd.DataFrame) -> Dict:
     return report
 
 
-# ==============================================================================
-# ANALYSE DES COHORTES
-# ==============================================================================
-
 def create_cohorts(df: pd.DataFrame) -> pd.DataFrame:
     """
     Crée les cohortes d'acquisition basées sur le mois de première transaction.
@@ -632,10 +604,6 @@ def calculate_retention(cohort_df: pd.DataFrame) -> pd.DataFrame:
 
     return retention_matrix
 
-
-# ==============================================================================
-# SEGMENTATION RFM (Recency, Frequency, Monetary)
-# ==============================================================================
 
 def calculate_rfm(df: pd.DataFrame, as_of_date: Optional[datetime] = None) -> pd.DataFrame:
     """
@@ -763,10 +731,6 @@ def calculate_rfm(df: pd.DataFrame, as_of_date: Optional[datetime] = None) -> pd
 
     return rfm
 
-
-# ==============================================================================
-# CALCUL DE LA CUSTOMER LIFETIME VALUE (CLV)
-# ==============================================================================
 
 def calculate_clv_empirical(df: pd.DataFrame, period_months: int = 12) -> pd.DataFrame:
     """
@@ -942,10 +906,6 @@ def calculate_clv_formula(
     return result
 
 
-# ==============================================================================
-# FILTRAGE ET TRANSFORMATION
-# ==============================================================================
-
 def apply_filters(df: pd.DataFrame, filters_dict: Dict) -> pd.DataFrame:
     """
     Applique un ensemble de filtres au DataFrame.
@@ -1048,10 +1008,6 @@ def apply_filters(df: pd.DataFrame, filters_dict: Dict) -> pd.DataFrame:
 
     return df_filtered
 
-
-# ==============================================================================
-# SIMULATION DE SCENARIOS
-# ==============================================================================
 
 def simulate_scenario(df: pd.DataFrame, params: Dict) -> Dict:
     """
@@ -1195,10 +1151,6 @@ def simulate_scenario(df: pd.DataFrame, params: Dict) -> Dict:
 
     return results
 
-
-# ==============================================================================
-# EXPORT DE DONNEES
-# ==============================================================================
 
 def export_to_csv(df: pd.DataFrame, filename: str, directory: Optional[Path] = None) -> str:
     """
@@ -1351,10 +1303,6 @@ def export_chart_to_png(
     except Exception as e:
         raise IOError(f"Erreur lors de l'export du graphique vers {file_path}: {str(e)}")
 
-
-# ==============================================================================
-# CALCULS DE METRIQUES
-# ==============================================================================
 
 def calculate_kpis(df: pd.DataFrame) -> Dict[str, Union[float, int]]:
     """
@@ -1578,10 +1526,6 @@ def get_churn_predictions(rfm_df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-# ==============================================================================
-# UTILITAIRES DE VALIDATION
-# ==============================================================================
-
 def validate_dataframe(df: pd.DataFrame, required_columns: List[str]) -> Tuple[bool, List[str]]:
     """
     Valide qu'un DataFrame contient toutes les colonnes requises.
@@ -1612,10 +1556,6 @@ def validate_dataframe(df: pd.DataFrame, required_columns: List[str]) -> Tuple[b
 
     return is_valid, missing_columns
 
-
-# ==============================================================================
-# UTILITAIRES DE FORMATAGE
-# ==============================================================================
 
 def format_currency(amount: float, currency: str = "GBP") -> str:
     """
@@ -1684,9 +1624,71 @@ def format_percentage(value: float, decimals: int = 1) -> str:
     return formatted
 
 
-# ==============================================================================
-# MODULE INFO
-# ==============================================================================
+def apply_global_filters(df: pd.DataFrame, filters: dict = None) -> pd.DataFrame:
+    """
+    Applique les filtres globaux aux donnees.
+
+    Cette fonction permet d'appliquer de maniere coherente les filtres
+    definis dans la sidebar globale a travers toutes les pages de l'application.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame a filtrer
+    filters : dict, optional
+        Dictionnaire contenant les filtres a appliquer.
+        Cles attendues:
+        - 'date_range': tuple de deux dates (start, end)
+        - 'countries': list de pays a inclure
+        - 'min_amount': montant minimum de transaction
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame filtre selon les criteres
+
+    Examples
+    --------
+    >>> filters = {
+    ...     'date_range': (date(2010, 1, 1), date(2010, 12, 31)),
+    ...     'countries': ['United Kingdom', 'France'],
+    ...     'min_amount': 10
+    ... }
+    >>> df_filtered = apply_global_filters(df, filters)
+    """
+    if filters is None or df.empty:
+        return df
+
+    df_filtered = df.copy()
+
+    # Filtre par periode
+    if 'date_range' in filters and filters['date_range'] is not None:
+        date_range = filters['date_range']
+        if isinstance(date_range, tuple) and len(date_range) == 2:
+            start_date, end_date = date_range
+            # Convertir en datetime si necessaire
+            if 'InvoiceDate' in df_filtered.columns:
+                start_dt = pd.Timestamp(start_date)
+                end_dt = pd.Timestamp(end_date) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+                df_filtered = df_filtered[
+                    (df_filtered['InvoiceDate'] >= start_dt) &
+                    (df_filtered['InvoiceDate'] <= end_dt)
+                ]
+
+    # Filtre par pays
+    if 'countries' in filters and filters['countries'] is not None:
+        countries = filters['countries']
+        if isinstance(countries, list) and len(countries) > 0 and 'Country' in df_filtered.columns:
+            df_filtered = df_filtered[df_filtered['Country'].isin(countries)]
+
+    # Filtre par montant minimum
+    if 'min_amount' in filters and filters['min_amount'] is not None:
+        min_amount = filters['min_amount']
+        if min_amount > 0 and 'TotalAmount' in df_filtered.columns:
+            df_filtered = df_filtered[df_filtered['TotalAmount'] >= min_amount]
+
+    return df_filtered
+
 
 if __name__ == "__main__":
     print("Module utils.py - Fonctions utilitaires")

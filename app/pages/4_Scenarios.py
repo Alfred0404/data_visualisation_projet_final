@@ -20,10 +20,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 import config
 import utils
 
-# ==============================================================================
 # CONFIGURATION DE LA PAGE
-# ==============================================================================
-
 st.set_page_config(
     page_title="Simulation de Scenarios - Marketing Analytics",
     page_icon=":material/science:",
@@ -31,10 +28,7 @@ st.set_page_config(
 )
 
 
-# ==============================================================================
 # FONCTIONS UTILITAIRES
-# ==============================================================================
-
 def format_currency(value):
     """Formate une valeur monetaire en livres sterling."""
     return f"£{value:,.0f}"
@@ -285,10 +279,7 @@ def generate_insights(results, params):
     return insights
 
 
-# ==============================================================================
 # EN-TETE DE LA PAGE
-# ==============================================================================
-
 st.title("Simulation de Scenarios Marketing")
 st.markdown("""
 Simulez l'impact de differentes strategies marketing sur vos KPIs
@@ -298,24 +289,22 @@ et projetez les revenus futurs bases sur des hypotheses d'amelioration.
 st.divider()
 
 
-# ==============================================================================
 # VERIFICATION DES DONNEES
-# ==============================================================================
-
 if not st.session_state.get('data_loaded', False):
     st.warning("Veuillez d'abord charger les donnees depuis la page d'accueil.")
     st.stop()
 
 
-# ==============================================================================
 # KPIS ACTUELS (BASELINE)
-# ==============================================================================
-
 st.header("Situation Actuelle (Baseline)")
 
 df = st.session_state.get('df_clean', None)
 
 if df is not None:
+    # Appliquer les filtres globaux
+    active_filters = st.session_state.get('active_filters', {})
+    df = utils.apply_global_filters(df, active_filters)
+
     # Calculer les KPIs actuels
     with st.spinner("Calcul des KPIs actuels..."):
         baseline_kpis = utils.calculate_kpis(df)
@@ -392,10 +381,7 @@ else:
 st.divider()
 
 
-# ==============================================================================
 # SELECTION DU SCENARIO
-# ==============================================================================
-
 st.header("Configuration du Scenario")
 
 # Choix entre scenarios predefinis ou personnalise
@@ -412,10 +398,7 @@ st.divider()
 simulation_params = None
 
 if scenario_type == "Scenarios predefinis":
-    # ==============================================================================
     # SCENARIOS PREDEFINIS
-    # ==============================================================================
-
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -494,10 +477,7 @@ if scenario_type == "Scenarios predefinis":
             st.session_state.simulation_params = simulation_params
 
 else:
-    # ==============================================================================
     # SCENARIO PERSONNALISE
-    # ==============================================================================
-
     st.subheader("Parametres personnalises")
 
     col1, col2 = st.columns(2)
@@ -635,10 +615,7 @@ else:
 st.divider()
 
 
-# ==============================================================================
 # RESULTATS DE LA SIMULATION
-# ==============================================================================
-
 st.header("Resultats de la Simulation")
 
 # Verifier si une simulation a ete lancee
@@ -861,10 +838,7 @@ else:
 st.divider()
 
 
-# ==============================================================================
 # COMPARAISON DE SCENARIOS
-# ==============================================================================
-
 st.header("Comparaison de Scenarios")
 
 st.markdown("""
@@ -973,10 +947,7 @@ else:
 st.divider()
 
 
-# ==============================================================================
 # EXPORT
-# ==============================================================================
-
 st.header("Export de la Simulation")
 
 col1, col2, col3 = st.columns(3)
@@ -1064,9 +1035,6 @@ with col3:
         """)
 
 
-# ==============================================================================
 # FOOTER
-# ==============================================================================
-
 st.divider()
 st.caption("Page Simulation de Scenarios - Derniere mise a jour : " + datetime.now().strftime("%Y-%m-%d %H:%M"))
