@@ -46,14 +46,25 @@ def format_file_size(size_mb):
 
 def convert_df_to_csv(df):
     """Convert DataFrame to CSV bytes for download"""
-    return df.to_csv(index=False, encoding='utf-8').encode('utf-8')
+    # Convertir les colonnes Period en string pour l'export
+    df_export = df.copy()
+    for col in df_export.columns:
+        if pd.api.types.is_period_dtype(df_export[col]):
+            df_export[col] = df_export[col].astype(str)
+    return df_export.to_csv(index=False, encoding='utf-8').encode('utf-8')
 
 
 def convert_df_to_excel(df):
     """Convert DataFrame to Excel bytes for download"""
+    # Convertir les colonnes Period en string pour l'export
+    df_export = df.copy()
+    for col in df_export.columns:
+        if pd.api.types.is_period_dtype(df_export[col]):
+            df_export[col] = df_export[col].astype(str)
+
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Data')
+        df_export.to_excel(writer, index=False, sheet_name='Data')
     return output.getvalue()
 
 
@@ -108,6 +119,12 @@ with tab1:
 
     # Get data from session state
     df_clean = st.session_state.get('df_clean', pd.DataFrame())
+    if df_clean is None:
+        df_clean = pd.DataFrame()
+
+    # Debug: vérifier si les données sont chargées
+    if df_clean.empty and st.session_state.get('data_loaded', False):
+        st.warning("Les données sont marquées comme chargées mais le DataFrame est vide. Essayez de recharger les données depuis la page d'accueil.")
 
     # Appliquer les filtres globaux
     if not df_clean.empty:
@@ -179,6 +196,8 @@ with tab2:
 
     # Get RFM data from session state
     df_rfm = st.session_state.get('df_rfm', pd.DataFrame())
+    if df_rfm is None:
+        df_rfm = pd.DataFrame()
 
     if not df_rfm.empty:
         st.markdown(f"""
@@ -250,6 +269,8 @@ with tab3:
 
     # Get cohort data from session state
     df_cohorts = st.session_state.get('df_cohorts', pd.DataFrame())
+    if df_cohorts is None:
+        df_cohorts = pd.DataFrame()
 
     if not df_cohorts.empty:
         st.markdown(f"""
@@ -319,8 +340,17 @@ with tab4:
     available_datasets = []
 
     df_clean = st.session_state.get('df_clean', pd.DataFrame())
+    if df_clean is None:
+        df_clean = pd.DataFrame()
+
     df_rfm = st.session_state.get('df_rfm', pd.DataFrame())
+    if df_rfm is None:
+        df_rfm = pd.DataFrame()
+
     df_cohorts = st.session_state.get('df_cohorts', pd.DataFrame())
+    if df_cohorts is None:
+        df_cohorts = pd.DataFrame()
+
     kpis = st.session_state.get('kpis', {})
 
     if not df_clean.empty:
@@ -425,98 +455,3 @@ Les graphiques Plotly peuvent être exportés directement depuis chaque page :
 st.info("""
 **Astuce:** Pour une qualité optimale, utilisez le format SVG qui est vectoriel et s'adapte à toutes les tailles sans perte de qualité.
 """)
-
-st.divider()
-
-
-# INFORMATIONS ET AIDE
-st.header("Informations et Aide")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.subheader("Formats disponibles")
-
-    st.markdown("""
-    **CSV (Comma-Separated Values)**
-    - Format universel, compatible avec tous les outils
-    - Idéal pour Excel, Google Sheets, Python, R
-    - Taille de fichier réduite
-    - Recommandé pour les grands datasets
-
-    **Excel (XLSX)**
-    - Format Microsoft Excel natif
-    - Préserve le formatage
-    - Compatible avec Excel, LibreOffice, Google Sheets
-    - Idéal pour les présentations et rapports
-    """)
-
-with col2:
-    st.subheader("Recommandations")
-
-    st.markdown("""
-    **Pour l'analyse:**
-    - Utilisez CSV pour importer dans Python/R
-    - Exportez les données nettoyées en premier
-
-    **Pour les rapports:**
-    - Utilisez Excel pour les présentations
-    - Exportez les analyses RFM et Cohortes
-    - Utilisez les graphiques en haute résolution
-
-    **Pour partager:**
-    - Utilisez l'export groupé (ZIP)
-    - Inclut toutes les analyses en un seul fichier
-    - Facilite le partage et l'archivage
-    """)
-
-st.divider()
-
-
-# STATISTIQUES D'EXPORT
-st.header("Statistiques")
-
-col1, col2, col3 = st.columns(3)
-
-df_clean = st.session_state.get('df_clean', pd.DataFrame())
-# Appliquer les filtres globaux aux statistiques
-if not df_clean.empty:
-    active_filters = st.session_state.get('active_filters', {})
-    df_clean = utils.apply_global_filters(df_clean, active_filters)
-
-df_rfm = st.session_state.get('df_rfm', pd.DataFrame())
-df_cohorts = st.session_state.get('df_cohorts', pd.DataFrame())
-
-with col1:
-    datasets_available = 0
-    if not df_clean.empty:
-        datasets_available += 1
-    if not df_rfm.empty:
-        datasets_available += 1
-    if not df_cohorts.empty:
-        datasets_available += 1
-
-    st.metric("Datasets disponibles", datasets_available)
-
-with col2:
-    total_size = 0
-    if not df_clean.empty:
-        total_size += get_file_size(df_clean)
-    if not df_rfm.empty:
-        total_size += get_file_size(df_rfm)
-    if not df_cohorts.empty:
-        total_size += get_file_size(df_cohorts)
-
-    st.metric("Taille totale estimée", format_file_size(total_size))
-
-with col3:
-    total_rows = 0
-    if not df_clean.empty:
-        total_rows += len(df_clean)
-
-    st.metric("Lignes de données", f"{total_rows:,}")
-
-
-# FOOTER
-st.divider()
-st.caption("Page Export - Dernière mise à jour : " + datetime.now().strftime("%Y-%m-%d %H:%M"))

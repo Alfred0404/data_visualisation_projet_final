@@ -2,55 +2,31 @@
 
 ## Description
 
-Application d'analyse de donnees marketing developpee avec Streamlit, permettant d'exploiter le dataset Online Retail II pour optimiser les strategies marketing et maximiser la valeur client. Cette solution propose des analyses approfondies de cohortes, une segmentation client basee sur la methodologie RFM, le calcul de la Customer Lifetime Value (CLV) et la simulation de scenarios marketing.
+Application web interactive d'analyse marketing basee sur 525K transactions e-commerce (Online Retail II). Offre des outils d'aide a la decision pour optimiser la retention client et maximiser le ROI marketing.
 
 ## Fonctionnalites
 
 ### Analyse de Cohortes
-- Suivi de l'evolution des cohortes d'acquisition dans le temps
-- Calcul des taux de retention par cohorte
-- Identification des periodes d'acquisition les plus performantes
-- Visualisations interactives des comportements de retention
+Suivi de la retention client par cohorte d'acquisition avec visualisations interactives.
 
 ### Segmentation RFM
-- Segmentation des clients selon trois criteres : Recence, Frequence et Montant
-- Identification automatique des segments strategiques (Champions, Clients Fideles, Clients a Risque, etc.)
-- Priorisation des actions marketing par segment
-- Tableaux de bord dedies par segment client
+Classification des clients en 8 segments strategiques (Champions, Fideles, A Risque, Perdus...) selon Recence, Frequence et Montant.
 
-### Customer Lifetime Value (CLV)
-- CLV empirique basee sur l'analyse des cohortes historiques
-- CLV predictive utilisant des modeles mathematiques
-- Projections de revenus futurs par segment
-- Optimisation du retour sur investissement des campagnes marketing
+### Customer Lifetime Value
+Calcul de la valeur vie client (empirique et predictive) pour optimiser les investissements marketing.
 
 ### Simulation de Scenarios
-- Modelisation de l'impact de l'amelioration du taux de retention
-- Simulation de l'effet de l'augmentation du panier moyen
-- Projection des revenus selon differents scenarios (optimiste, realiste, conservateur)
-- Aide a la decision strategique basee sur des donnees
+Modelisation de l'impact des actions marketing (retention, panier moyen, frequence) sur le CA futur.
 
 ### Export et Reporting
-- Export des donnees analysees au format CSV
-- Export des visualisations au format PNG haute resolution
-- Generation de rapports personnalises pour le partage avec les equipes
+Export CSV/Excel des analyses et telechargement des visualisations.
 
 ## Technologies Utilisees
 
-### Backend & Data Science
-- **Python 3.8+** : Langage de programmation principal
-- **Pandas** : Manipulation et analyse de donnees
-- **NumPy** : Calculs numeriques et operations matricielles
-- **Scikit-learn** : Algorithmes de machine learning et segmentation
-
-### Visualisation
-- **Streamlit** : Framework d'application web interactive
-- **Plotly** : Graphiques interactifs et tableaux de bord
-- **Matplotlib** : Visualisations statiques
-- **Seaborn** : Visualisations statistiques avancees
-
-### Traitement de Donnees
-- **openpyxl** : Lecture et ecriture de fichiers Excel
+- **Python 3.8+** | **Pandas** | **NumPy** : Traitement et analyse de donnees
+- **Streamlit** : Application web interactive
+- **Plotly** : Visualisations interactives
+- **openpyxl** : Import/export Excel
 
 ## Installation
 
@@ -129,42 +105,21 @@ projet_final/
 
 ## Methodologie
 
-### Nettoyage des Donnees
-- Suppression des transactions annulees
-- Filtrage des valeurs aberrantes
-- Gestion des donnees manquantes
-- Validation des montants et quantites
+**Nettoyage** : Filtrage des valeurs aberrantes, gestion des donnees manquantes, validation des montants.
 
-### Analyse RFM
-Segmentation basee sur trois dimensions :
-- **Recence (R)** : Nombre de jours depuis le dernier achat
-- **Frequence (F)** : Nombre total de transactions
-- **Montant (M)** : Chiffre d'affaires total genere
+**RFM** : Scores 1-5 (quintiles) sur Recence, Frequence et Montant → 8 segments strategiques.
 
-Chaque dimension est scoree de 1 a 4 (quartiles), permettant d'identifier 8 segments principaux.
+**CLV** : Calcul empirique (historique reel) et predictif (formule mathematique).
 
-### Calcul de la CLV
-Deux approches complementaires :
-- **CLV empirique** : Basee sur les comportements reels des cohortes historiques
-- **CLV predictive** : Utilisant des formules mathematiques avec taux de retention et valeur moyenne
-
-### Analyse de Cohortes
-Regroupement des clients par mois de premiere transaction et suivi de leur comportement dans le temps pour mesurer la retention et la valeur generee par periode.
+**Cohortes** : Regroupement par mois d'acquisition, suivi de retention dans le temps.
 
 ## Dataset
 
-Le projet utilise le dataset **Online Retail II** contenant des transactions de vente en ligne entre 2009 et 2011 :
-- Plus de 500 000 transactions
-- Informations sur les produits, clients, montants et dates
-- Couverture geographique internationale
+**Online Retail II** (2009-2011) : 525K transactions e-commerce, 4.3K clients, 37 pays.
 
 ## Configuration
 
-Les parametres de l'application peuvent etre ajustes dans `config.py` :
-- Seuils de segmentation RFM
-- Parametres de calcul CLV (taux de retention, taux d'actualisation)
-- Palettes de couleurs pour les visualisations
-- Scenarios de simulation predefinis
+Parametres ajustables dans `config.py` : seuils RFM, taux CLV, scenarios predefinis, palettes de couleurs.
 
 ## Auteur
 

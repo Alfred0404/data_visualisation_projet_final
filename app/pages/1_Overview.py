@@ -39,18 +39,6 @@ et l'évolution de votre activité commerciale.
 st.divider()
 
 
-# FILTRES SPECIFIQUES A LA PAGE
-with st.sidebar:
-    st.subheader("Filtres - Overview")
-
-    # TODO: Ajouter des filtres spécifiques
-    # - Période de comparaison (MoM, QoQ, YoY)
-    # - Segments à inclure
-    # - etc.
-
-    st.divider()
-
-
 # VERIFICATION DES DONNEES
 if not st.session_state.get('data_loaded', False):
     st.warning("Veuillez d'abord charger les données depuis la page d'accueil.")
@@ -594,10 +582,7 @@ try:
             else:
                 st.info(message)
 
-        if recommendations:
-            st.subheader("Recommandations")
-            for i, rec in enumerate(recommendations, 1):
-                st.markdown(f"{i}. {rec}")
+        
 
 except Exception as e:
     st.error(f"Erreur lors de la génération des alertes: {str(e)}")

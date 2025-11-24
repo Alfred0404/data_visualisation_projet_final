@@ -196,27 +196,27 @@ with st.expander("Comprendre la méthodologie RFM", expanded=False):
     Le **RFM** est une méthode de segmentation client basée sur trois dimensions :
 
     - **R - Recency (Récence)** : Quand le client a-t-il acheté pour la dernière fois ?
-      - Plus récent = meilleur score (4)
+      - Plus récent = meilleur score (5)
       - Moins récent = score faible (1)
 
     - **F - Frequency (Fréquence)** : Combien de fois le client a-t-il acheté ?
-      - Plus de transactions = meilleur score (4)
+      - Plus de transactions = meilleur score (5)
       - Peu de transactions = score faible (1)
 
     - **M - Monetary (Montant)** : Combien le client a-t-il dépensé au total ?
-      - Montant élevé = meilleur score (4)
+      - Montant élevé = meilleur score (5)
       - Montant faible = score faible (1)
 
     ### Comment ça fonctionne ?
 
-    1. Chaque client reçoit un score de 1 à 4 pour chaque dimension
-    2. Les scores sont combinés (ex: "444" = meilleur client)
+    1. Chaque client reçoit un score de 1 à 5 pour chaque dimension
+    2. Les scores sont combinés (ex: "555" = meilleur client)
     3. Les clients sont regroupés en segments marketing
     4. Chaque segment nécessite une stratégie adaptée
 
     ### Les segments principaux
 
-    - **Champions (444)** : Meilleurs clients - fidélisation premium
+    - **Champions (555)** : Meilleurs clients - fidélisation premium
     - **Loyal Customers** : Clients fidèles - programmes de fidélité
     - **Potential Loyalists** : Clients prometteurs - nurturing
     - **At Risk** : Clients à risque - campagnes de réactivation
@@ -456,6 +456,7 @@ segments_available = sorted(df_rfm['Segment'].unique().tolist())
 selected_segment = st.selectbox(
     "Choisir un segment à analyser",
     segments_available,
+    index=3,
     help="Sélectionner un segment pour voir son profil détaillé"
 )
 
