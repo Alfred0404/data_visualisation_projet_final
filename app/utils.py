@@ -950,51 +950,20 @@ def apply_filters(df: pd.DataFrame, filters_dict: Dict) -> pd.DataFrame:
     """
     Applique un ensemble de filtres au DataFrame.
 
-    Cette fonction centralise la logique de filtrage pour assurer la cohérence
-    à travers l'application. Les filtres peuvent porter sur :
+    Les filtres possibles incluent :
     - Plages de dates
     - Pays
-    - Montants de transaction
-    - Segments de clients
-    - Produits
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        DataFrame à filtrer
-    filters_dict : dict
-        Dictionnaire de filtres avec la structure :
-        {
-            'date_range': (start_date, end_date),
-            'countries': ['UK', 'France'],
-            'min_amount': 10.0,
-            'segments': ['Champions', 'Loyal Customers'],
-            'customer_ids': [12345, 67890]
-        }
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame filtré
-
-    Examples
-    --------
-    >>> filters = {
-    ...     'date_range': ('2010-01-01', '2010-12-31'),
-    ...     'countries': ['United Kingdom'],
-    ...     'min_amount': 50.0
-    ... }
-    >>> df_filtered = apply_filters(df_clean, filters)
-
-    Notes
-    -----
-    Les filtres non spécifiés (None ou absents) sont ignorés
-    Les filtres sont appliqués de manière cumulative (AND)
+    - Unité temporelle (mois / trimestre)
+    - Type de client
+    - Valeur mini de commande
+    - Mode retours : Inclure / Exclure / Neutraliser
     """
-    # Copier pour éviter de modifier l'original
+
     df_filtered = df.copy()
 
-    # Filtre : plage de dates
+    # -------------------------
+    # 1) FILTRE : DATES
+    # -------------------------
     if 'start_date' in filters_dict and filters_dict['start_date'] is not None:
         start_date = pd.to_datetime(filters_dict['start_date'])
         df_filtered = df_filtered[df_filtered['InvoiceDate'] >= start_date]
@@ -1003,51 +972,84 @@ def apply_filters(df: pd.DataFrame, filters_dict: Dict) -> pd.DataFrame:
         end_date = pd.to_datetime(filters_dict['end_date'])
         df_filtered = df_filtered[df_filtered['InvoiceDate'] <= end_date]
 
-    # Ancien format de date_range pour compatibilité
+    # Compatibilité ancien format
     if 'date_range' in filters_dict and filters_dict['date_range'] is not None:
         start_date, end_date = filters_dict['date_range']
         if start_date:
-            start_date = pd.to_datetime(start_date)
-            df_filtered = df_filtered[df_filtered['InvoiceDate'] >= start_date]
+            df_filtered = df_filtered[df_filtered['InvoiceDate'] >= pd.to_datetime(start_date)]
         if end_date:
-            end_date = pd.to_datetime(end_date)
-            df_filtered = df_filtered[df_filtered['InvoiceDate'] <= end_date]
+            df_filtered = df_filtered[df_filtered['InvoiceDate'] <= pd.to_datetime(end_date)]
 
-    # Filtre : pays
-    if 'countries' in filters_dict and filters_dict['countries'] is not None and len(filters_dict['countries']) > 0:
+    # -------------------------
+    # 2) FILTRE : PAYS
+    # -------------------------
+    if 'countries' in filters_dict and filters_dict['countries']:
         df_filtered = df_filtered[df_filtered['Country'].isin(filters_dict['countries'])]
 
-    # Filtre : type de client (B2B ou B2C) - basé sur le volume par exemple
-    if 'customer_type' in filters_dict and filters_dict['customer_type'] is not None:
-        # Stratégie simple : B2B = transactions > 100 unités en moyenne
-        if filters_dict['customer_type'] == 'B2B':
-            df_filtered = df_filtered[df_filtered['Quantity'] > 100]
-        elif filters_dict['customer_type'] == 'B2C':
-            df_filtered = df_filtered[df_filtered['Quantity'] <= 100]
+    # -------------------------
+    # 3) FILTRE : UNITE TEMPORELLE (mois / trimestre)
+    # -------------------------
+    if filters_dict.get("time_unit") == "Mois":
+        df_filtered["TimeUnit"] = df_filtered["InvoiceDate"].dt.to_period("M")
+    elif filters_dict.get("time_unit") == "Trimestre":
+        df_filtered["TimeUnit"] = df_filtered["InvoiceDate"].dt.to_period("Q")
 
-    # Filtre : montant minimum de commande
+    # -------------------------
+    # 4) FILTRE : TYPE CLIENT (B2B / B2C)
+    # -------------------------
+    customer_type = filters_dict.get("customer_type")
+    if customer_type and customer_type != "Tous":
+        if "CustomerType" in df_filtered.columns:
+            df_filtered = df_filtered[df_filtered["CustomerType"] == customer_type]
+
+    # -------------------------
+    # 5) FILTRE : MONTANT MIN DE COMMANDE
+    # -------------------------
     if 'min_order_value' in filters_dict and filters_dict['min_order_value'] is not None:
         df_filtered = df_filtered[df_filtered['TotalAmount'] >= filters_dict['min_order_value']]
 
-    # Ancien format min_amount pour compatibilité
+    # Compatibilité ancien “min_amount”
     if 'min_amount' in filters_dict and filters_dict['min_amount'] is not None:
         df_filtered = df_filtered[df_filtered['TotalAmount'] >= filters_dict['min_amount']]
 
-    # Filtre : exclure les retours
-    if 'exclude_returns' in filters_dict and filters_dict['exclude_returns'] is True:
-        df_filtered = df_filtered[~df_filtered['IsReturn']]
-
-    # Filtre : IDs clients spécifiques
-    if 'customer_ids' in filters_dict and filters_dict['customer_ids'] is not None and len(filters_dict['customer_ids']) > 0:
+    # -------------------------
+    # 6) FILTRE : LISTE DE CLIENTS
+    # -------------------------
+    if 'customer_ids' in filters_dict and filters_dict['customer_ids']:
         df_filtered = df_filtered[df_filtered['Customer ID'].isin(filters_dict['customer_ids'])]
 
-    # Filtre : segments RFM (si disponible dans le df)
-    if 'segments' in filters_dict and filters_dict['segments'] is not None and len(filters_dict['segments']) > 0:
+    # -------------------------
+    # 7) FILTRE : SEGMENTS RFM
+    # -------------------------
+    if 'segments' in filters_dict and filters_dict['segments']:
         if 'RFM_Segment' in df_filtered.columns:
             df_filtered = df_filtered[df_filtered['RFM_Segment'].isin(filters_dict['segments'])]
 
-    return df_filtered
+    # ============================================================
+    # 8) 🔥 MODE RETOURS (NOUVEAU)
+    # ============================================================
+    mode = filters_dict.get("returns_mode", "Inclure")
 
+    if mode == "Exclure":
+        # On enlève toutes les lignes retours
+        df_filtered = df_filtered[~df_filtered["IsReturn"]]
+
+    elif mode == "Neutraliser":
+        # Les retours n'annulent pas les ventes, mais leur montant devient 0
+        df_filtered["TotalAmount"] = df_filtered["TotalAmount"].where(
+            ~df_filtered["IsReturn"],
+            -df_filtered["TotalAmount"]  # neutralisation
+        )
+
+    # ============================================================
+    # 9) 🔥 TYPE CLIENT (VERSION PRO)
+    # ============================================================
+    customer_type = filters_dict.get("customer_type")
+    if customer_type and customer_type != "Tous":
+        if "CustomerType" in df_filtered.columns:
+            df_filtered = df_filtered[df_filtered["CustomerType"] == customer_type]
+
+    return df_filtered
 
 # ==============================================================================
 # SIMULATION DE SCENARIOS

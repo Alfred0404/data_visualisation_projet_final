@@ -21,7 +21,6 @@ from pathlib import Path
 # Ajouter le répertoire parent au path pour importer config et utils
 sys.path.append(str(Path(__file__).parent.parent))
 import config
-
 import utils
 
 
@@ -43,7 +42,7 @@ st.set_page_config(
 
 
 # ==============================================================================
-# GESTION DE L'ETAT DE SESSION
+# #GESTION DE L'ETAT DE SESSION
 # ==============================================================================
 
 def init_session_state():
@@ -70,17 +69,30 @@ def init_session_state():
     if 'df_rfm' not in st.session_state:
         st.session_state.df_rfm = None
 
-    # Filtres actifs
+    # Filtres actifs (période, pays, seuil, etc.)
     if 'active_filters' not in st.session_state:
         st.session_state.active_filters = {}
 
-    # KPIs
+    # KPIs globaux
     if 'kpis' not in st.session_state:
         st.session_state.kpis = {}
 
+    # Paramètres avancés globaux (pour respecter le périmètre fonctionnel)
+    # - unité de temps (mois / trimestre)
+    # - mode retours (inclure / exclure / neutraliser)
+    # - type client (placeholder si pas dans les données)
+    if 'unit_of_time' not in st.session_state:
+        st.session_state.unit_of_time = "Mois"
+
+    if 'returns_mode' not in st.session_state:
+        st.session_state.returns_mode = "Inclure"
+
+    if 'customer_type' not in st.session_state:
+        st.session_state.customer_type = "Tous"
+
 
 # ==============================================================================
-# FONCTIONS DE CHARGEMENT DES DONNEES
+#FONCTIONS DE CHARGEMENT DES DONNEES
 # ==============================================================================
 
 @st.cache_data(show_spinner="Chargement des données en cours...")
@@ -131,7 +143,7 @@ def clean_and_cache_data(_df):
 
 
 # ==============================================================================
-# SIDEBAR - NAVIGATION ET FILTRES GLOBAUX
+#SIDEBAR - NAVIGATION ET FILTRES GLOBAUX
 # ==============================================================================
 
 def render_sidebar():
@@ -141,6 +153,7 @@ def render_sidebar():
     Cette fonction crée :
     - Le menu de navigation entre les pages
     - Les filtres globaux applicables à toutes les analyses
+    - Les paramètres avancés (unité de temps, retours, type client)
     - Les informations sur les données chargées
     """
     with st.sidebar:
@@ -159,11 +172,11 @@ def render_sidebar():
                 trans_with_client = len(df[df['HasCustomerID']])
 
                 st.info(f"""
-                **Données disponibles:**
+                **Données disponibles :**
                 - {total_trans:,} transactions totales
                 - {trans_with_client:,} avec Customer ID ({(trans_with_client/total_trans)*100:.1f}%)
                 - {clients_with_id:,} clients uniques
-                - Période: {df['InvoiceDate'].min().strftime('%Y-%m-%d')}
+                - Période : {df['InvoiceDate'].min().strftime('%Y-%m-%d')}
                   à {df['InvoiceDate'].max().strftime('%Y-%m-%d')}
                 """)
         else:
@@ -171,45 +184,101 @@ def render_sidebar():
 
         st.divider()
 
-        # Filtres globaux
+        # ----------------------------------------------------------------------
+        # Filtres globaux "de base"
+        # ----------------------------------------------------------------------
         st.subheader("Filtres globaux")
 
         if st.session_state.data_loaded and st.session_state.df_clean is not None:
             df_clean = st.session_state.df_clean
 
-            # Date range selector
+            # Sélecteur de période (analyse glissante possible via les pages)
             min_date = df_clean['InvoiceDate'].min().date()
             max_date = df_clean['InvoiceDate'].max().date()
             date_range = st.date_input(
-                "Sélection de période",
-                value=(min_date, max_date),
+                "Période d'analyse",
+                value=st.session_state.active_filters.get(
+                    'date_range',
+                    (min_date, max_date)
+                ),
                 min_value=min_date,
                 max_value=max_date,
+                help="Période d'analyse des transactions (fenêtre temporelle)."
             )
 
-            # Country multiselect
-            all_countries = df_clean['Country'].unique()
+            # Sélecteur pays
+            all_countries = sorted(df_clean['Country'].unique())
             selected_countries = st.multiselect(
-                "Sélection de pays",
+                "Pays",
                 options=all_countries,
-                default=st.session_state.active_filters.get('countries', list(all_countries))
+                default=st.session_state.active_filters.get(
+                    'countries',
+                    all_countries
+                ),
+                help="Filtrer l'analyse sur un ou plusieurs pays."
             )
 
-            # Minimum transaction amount slider
+            # Seuil de commande (montant minimum)
             min_amount = st.slider(
-                "Montant minimum de transaction",
+                "Seuil de commande (montant minimum)",
                 min_value=0,
                 max_value=int(df_clean['TotalAmount'].max()),
-                value=st.session_state.active_filters.get('min_amount', 0)
+                value=st.session_state.active_filters.get('min_amount', 0),
+                help="Exclure les très petites commandes (bruit) sous ce montant."
             )
 
+            # ------------------------------------------------------------------
+            # Paramètres avancés globaux (pour coller au périmètre fonctionnel)
+            # ------------------------------------------------------------------
+            st.subheader("Paramètres avancés")
+
+            # Unité de temps (mois / trimestre) utilisée dans les pages
+            unit_of_time = st.radio(
+                "Unité de temps",
+                ["Mois", "Trimestre"],
+                key="unit_of_time_radio",
+                index=["Mois", "Trimestre"].index(st.session_state.unit_of_time),
+                help="Définit la granularité temporelle des analyses (ex. courbes, cohortes)."
+            )
+
+            # Mode retours : inclure / exclure / neutraliser
+            returns_mode = st.radio(
+                "Mode retours",
+                ["Inclure", "Exclure", "Neutraliser"],
+                key="returns_mode_radio",
+                index=["Inclure", "Exclure", "Neutraliser"].index(st.session_state.returns_mode),
+                help=(
+                    "Inclure : les retours sont comptés négativement dans le CA.\n"
+                    "Exclure : les retours sont retirés du périmètre.\n"
+                    "Neutraliser : CA net (achats - retours), avec badge à afficher dans les pages."
+                )
+            )
+
+            # Type client (placeholder si pas encore présent dans les données)
+            customer_type = st.selectbox(
+                "Type de client",
+                ["Tous", "B2C", "B2B"],
+                index=["Tous", "B2C", "B2B"].index(st.session_state.customer_type),
+                help="Filtrer selon le type de clients si disponible dans les données."
+            )
+
+            # Sauvegarde dans l'état de session (accès direct depuis les pages)
+            st.session_state.unit_of_time = unit_of_time
+            st.session_state.returns_mode = returns_mode
+            st.session_state.customer_type = customer_type
+
+            # Sauvegarde également dans active_filters pour utils.apply_filters() & co
             st.session_state.active_filters = {
                 'date_range': date_range,
                 'countries': selected_countries,
-                'min_amount': min_amount
+                'min_amount': min_amount,
+                'unit_of_time': unit_of_time,
+                'returns_mode': returns_mode,
+                'customer_type': customer_type
             }
+
         else:
-            st.info("Chargez les données pour voir les filtres.")
+            st.info("Chargez les données pour voir et utiliser les filtres globaux.")
 
         st.divider()
 
@@ -227,7 +296,7 @@ def render_sidebar():
 
 
 # ==============================================================================
-# PAGE D'ACCUEIL
+#PAGE D'ACCUEIL
 # ==============================================================================
 
 def render_home_page():
@@ -285,18 +354,18 @@ def render_home_page():
         st.markdown("""
         Utilisez le menu de gauche pour naviguer entre les différentes pages :
 
-        - **Overview** : Vue d'ensemble et KPIs
-        - **Cohortes** : Analyse des cohortes
-        - **Segments** : Segmentation RFM
-        - **Scénarios** : Simulations
-        - **Export** : Exports et rapports
+        - **Overview** : Vue d'ensemble et KPIs (North Star, CLV baseline…)
+        - **Cohortes** : Rétention par cohortes d'acquisition
+        - **Segments** : Segmentation RFM & priorités d'activation
+        - **Scénarios** : Simulation (remise, marge, rétention…)
+        - **Export** : Plan d’action & exports (listes activables, CSV)
         """)
 
         st.info("""
-        **Astuce**
+        ℹ️ **Astuce**
 
         Utilisez les filtres globaux dans la barre latérale pour affiner
-        vos analyses sur toutes les pages.
+        vos analyses sur toutes les pages (période, pays, retours, etc.).
         """)
 
     st.divider()
@@ -314,30 +383,39 @@ def render_home_page():
             st.metric(
                 label="Clients totaux",
                 value=f"{kpis['total_customers']:,}",
-                delta=None
+                delta=None,
+                help=(
+                    "Nombre total de clients uniques ayant au moins une transaction "
+                    "sur toute la période disponible."
+                )
             )
 
         with col2:
             st.metric(
                 label="Revenu total",
                 value=utils.format_currency(kpis['total_revenue']),
-                delta=None
+                delta=None,
+                help="Chiffre d'affaires total (achats - retours si neutralisation)."
             )
 
         with col3:
             st.metric(
                 label="Panier moyen",
                 value=utils.format_currency(kpis['avg_order_value']),
-                delta=None
+                delta=None,
+                help="Montant moyen par transaction (CA / nombre de commandes)."
             )
 
         with col4:
             st.metric(
                 label="Taux de rétention",
                 value=utils.format_percentage(kpis['retention_rate']),
-                delta=None
+                delta=None,
+                help=(
+                    "Proportion de clients ayant réalisé au moins 2 commandes "
+                    "sur la période."
+                )
             )
-
 
     else:
         st.warning("Chargez les données pour voir les KPIs globaux")
@@ -360,7 +438,6 @@ def render_home_page():
                 except Exception as e:
                     st.error(f"Une erreur est survenue lors du chargement des données : {e}")
 
-
     st.divider()
 
     # Guide de démarrage rapide
@@ -369,7 +446,7 @@ def render_home_page():
         ### Comment utiliser cette application ?
 
         #### 1. Charger les données
-        - Cliquez sur "Charger les données" ci-dessus
+        - Cliquez sur **« Charger les données »** ci-dessus
         - Les données seront automatiquement nettoyées et préparées
         - Un message de confirmation apparaîtra
 
@@ -379,14 +456,14 @@ def render_home_page():
         - Explorez la **Segmentation RFM** pour identifier vos meilleurs clients
 
         #### 3. Appliquer des filtres
-        - Utilisez les filtres globaux dans la barre latérale
+        - Utilisez les filtres globaux dans la barre latérale (période, pays, seuil de commande, retours…)
         - Les filtres s'appliquent à toutes les pages
-        - Vous pouvez réinitialiser les filtres à tout moment
+        - Vous pouvez réinitialiser les filtres en rechargeant les données
 
         #### 4. Simuler des scénarios
         - Allez sur la page **Scénarios**
-        - Ajustez les paramètres (rétention, panier moyen, etc.)
-        - Visualisez l'impact sur vos KPIs
+        - Ajustez les paramètres (rétention, panier moyen, marge, remises…)
+        - Visualisez immédiatement l’impact sur CA, CLV et rétention
 
         #### 5. Exporter vos résultats
         - Sur la page **Export**, téléchargez vos analyses
@@ -403,7 +480,7 @@ def render_home_page():
 
 
 # ==============================================================================
-# FONCTION PRINCIPALE
+#FONCTION PRINCIPALE
 # ==============================================================================
 
 def main():
@@ -412,21 +489,22 @@ def main():
 
     Cette fonction :
     - Initialise l'état de session
-    - Affiche la sidebar
-    - Affiche la page d'accueil
+    - Affiche la sidebar (filtres globaux + paramètres avancés)
+    - Affiche la page d'accueil (explications + KPIs globaux)
     """
     # Initialisation
     init_session_state()
 
-    # Sidebar
+    # Sidebar (navigation + filtres globaux pour toute l'app)
     render_sidebar()
 
-    # Page d'accueil
+    # Page d'accueil (la navigation vers Overview / Cohortes / Segments / Scénarios / Export
+    # est gérée par les fichiers dans le dossier `pages/`)
     render_home_page()
 
 
 # ==============================================================================
-# POINT D'ENTREE
+#POINT D'ENTREE
 # ==============================================================================
 
 if __name__ == "__main__":

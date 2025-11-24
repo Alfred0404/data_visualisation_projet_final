@@ -74,7 +74,7 @@ def generate_monthly_projection(current_revenue, growth_rate, months):
 def create_comparison_bar_chart(current_kpis, projected_kpis):
     """Cree un graphique comparatif des KPIs."""
 
-    metrics = ['Revenu Annuel', 'Nombre de Clients', 'Panier Moyen', 'Frequence d\'Achat']
+    metrics = ['Revenu Annuel', 'Nombre de Clients', 'Panier Moyen', "Frequence d'Achat"]
     current_values = [
         current_kpis['revenue'],
         current_kpis['customers'],
@@ -616,6 +616,31 @@ else:
             )
 
     with col2:
+        # --- Options avancées ---
+        st.markdown("#### Options avancées")
+
+        discount_rate = st.slider(
+            "Taux d’actualisation (d)",
+            min_value=0.0, max_value=0.30, value=0.10, step=0.01,
+            help="Actualisation utilisée pour la CLV (formule fermée)."
+        )
+
+        returns_override = st.checkbox(
+            "Inclure retours dans la simulation",
+            value=True,
+            help="Si décoché, les retours sont exclus pour la simulation."
+        )
+
+        # Choix cohorte cible (si données cohortes disponibles)
+        df_cohorts = st.session_state.get("df_cohorts", pd.DataFrame())
+        if not df_cohorts.empty:
+            cohort_options = ["Toutes"] + sorted(df_cohorts["CohortMonth"].unique())
+            target_cohort = st.selectbox("Cohorte cible", cohort_options)
+        else:
+            target_cohort = "Toutes"
+
+        st.divider()
+
         st.markdown("#### Lancer la Simulation")
         st.markdown("")  # Spacing
         if st.button("Simuler le Scenario", use_container_width=True, type="primary"):
@@ -627,7 +652,12 @@ else:
                 'margin_pct': margin_pct / 100,
                 'discount_pct': discount_pct / 100,
                 'forecast_months': forecast_months,
-                'strategy_cost': strategy_cost
+                'strategy_cost': strategy_cost,
+
+                # --- AJOUTS OBLIGATOIRES ---
+                'discount_rate': discount_rate,
+                'returns_override': returns_override,
+                'target_cohort': target_cohort
             }
             st.session_state.current_scenario = 'custom'
             st.session_state.simulation_params = simulation_params
@@ -731,7 +761,7 @@ if 'simulation_params' in st.session_state and st.session_state.simulation_param
                 'Nombre de Clients',
                 'Nombre de Transactions',
                 'Panier Moyen (£)',
-                'Frequence d\'Achat',
+                "Frequence d'Achat",
                 'Taux de Retention',
                 'CLV Moyenne (£)'
             ],
@@ -806,28 +836,56 @@ if 'simulation_params' in st.session_state and st.session_state.simulation_param
 
         # Impact retention
         if params.get('retention_delta', 0) != 0:
-            retention_only = {'retention_delta': params['retention_delta'], 'aov_increase': 0, 'frequency_increase': 0, 'customer_growth': 0, 'margin_pct': params.get('margin_pct', 0.4), 'discount_pct': 0}
+            retention_only = {
+                'retention_delta': params['retention_delta'],
+                'aov_increase': 0,
+                'frequency_increase': 0,
+                'customer_growth': 0,
+                'margin_pct': params.get('margin_pct', 0.4),
+                'discount_pct': 0
+            }
             result_retention = utils.simulate_scenario(df, retention_only)
             param_names.append('Amelioration Retention')
             param_impacts.append(result_retention['delta']['revenue_pct'])
 
         # Impact AOV
         if params.get('aov_increase', 0) != 0:
-            aov_only = {'retention_delta': 0, 'aov_increase': params['aov_increase'], 'frequency_increase': 0, 'customer_growth': 0, 'margin_pct': params.get('margin_pct', 0.4), 'discount_pct': params.get('discount_pct', 0)}
+            aov_only = {
+                'retention_delta': 0,
+                'aov_increase': params['aov_increase'],
+                'frequency_increase': 0,
+                'customer_growth': 0,
+                'margin_pct': params.get('margin_pct', 0.4),
+                'discount_pct': params.get('discount_pct', 0)
+            }
             result_aov = utils.simulate_scenario(df, aov_only)
             param_names.append('Augmentation Panier Moyen')
             param_impacts.append(result_aov['delta']['revenue_pct'])
 
         # Impact Frequency
         if params.get('frequency_increase', 0) != 0:
-            freq_only = {'retention_delta': 0, 'aov_increase': 0, 'frequency_increase': params['frequency_increase'], 'customer_growth': 0, 'margin_pct': params.get('margin_pct', 0.4), 'discount_pct': 0}
+            freq_only = {
+                'retention_delta': 0,
+                'aov_increase': 0,
+                'frequency_increase': params['frequency_increase'],
+                'customer_growth': 0,
+                'margin_pct': params.get('margin_pct', 0.4),
+                'discount_pct': 0
+            }
             result_freq = utils.simulate_scenario(df, freq_only)
             param_names.append('Augmentation Frequence')
             param_impacts.append(result_freq['delta']['revenue_pct'])
 
         # Impact Customer Growth
         if params.get('customer_growth', 0) != 0:
-            growth_only = {'retention_delta': 0, 'aov_increase': 0, 'frequency_increase': 0, 'customer_growth': params['customer_growth'], 'margin_pct': params.get('margin_pct', 0.4), 'discount_pct': 0}
+            growth_only = {
+                'retention_delta': 0,
+                'aov_increase': 0,
+                'frequency_increase': 0,
+                'customer_growth': params['customer_growth'],
+                'margin_pct': params.get('margin_pct', 0.4),
+                'discount_pct': 0
+            }
             result_growth = utils.simulate_scenario(df, growth_only)
             param_names.append('Croissance Base Client')
             param_impacts.append(result_growth['delta']['revenue_pct'])

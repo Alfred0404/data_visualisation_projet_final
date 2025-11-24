@@ -78,6 +78,20 @@ st.set_page_config(
 # ==============================================================================
 
 st.title("Analyse de Cohortes")
+# Badge selon le mode retours actif
+if st.session_state.get("returns_mode") == "Exclure":
+    st.markdown(
+        "<span style='background-color:#ffcccc; padding:6px 12px; border-radius:6px; color:#b30000; font-weight:bold;'>🔁 Retours exclus</span>",
+        unsafe_allow_html=True
+    )
+elif st.session_state.get("returns_mode") == "Neutraliser":
+    st.markdown(
+        "<span style='background-color:#e6f2ff; padding:6px 12px; border-radius:6px; color:#004080; font-weight:bold;'>➖ Retours neutralisés (CA net)</span>",
+        unsafe_allow_html=True
+    )
+
+st.divider()
+
 st.markdown("""
 L'analyse de cohortes permet de suivre l'evolution de groupes de clients acquis
 durant la meme periode et d'evaluer leur comportement au fil du temps.
@@ -99,6 +113,36 @@ df = st.session_state.get('df_clean', None)
 if df is None:
     st.error("Erreur lors du chargement des donnees")
     st.stop()
+# ============================================================
+# APPLICATION DES FILTRES GLOBAUX (obligatoire)
+# ============================================================
+
+active_filters = st.session_state.get("active_filters", {})
+filters_dict = {}
+
+# Période globale
+date_range = active_filters.get("date_range")
+if date_range and len(date_range) == 2:
+    filters_dict["start_date"] = date_range[0]
+    filters_dict["end_date"] = date_range[1]
+
+# Pays
+countries = active_filters.get("countries")
+if countries:
+    filters_dict["countries"] = countries
+
+# Seuil minimum montant
+min_amount = active_filters.get("min_amount")
+if min_amount is not None:
+    filters_dict["min_amount"] = min_amount
+
+# Mode retours / Type client / Unité de temps
+filters_dict["returns_mode"] = st.session_state.get("returns_mode", "Inclure")
+filters_dict["customer_type"] = st.session_state.get("customer_type", "Tous")
+filters_dict["unit_of_time"] = st.session_state.get("unit_of_time", "M")
+
+# Application des filtres globaux
+df = utils.apply_filters(df, filters_dict)
 
 
 # ==============================================================================
@@ -172,6 +216,33 @@ with st.spinner("Creation des cohortes en cours..."):
 cohort_sizes = df_cohorts.groupby('CohortMonth')['Customer ID'].nunique()
 valid_cohorts = cohort_sizes[cohort_sizes >= min_cohort_size].index
 df_cohorts_filtered = df_cohorts[df_cohorts['CohortMonth'].isin(valid_cohorts)].copy()
+# ============================================================
+# AFFICHAGE DES FILTRES ACTIFS (UX obligatoire)
+# ============================================================
+
+with st.expander("Filtres actifs appliqués", expanded=True):
+    start = filters_dict.get("start_date")
+    end = filters_dict.get("end_date")
+
+    periode_txt = (
+        f"{start.strftime('%Y-%m-%d')} → {end.strftime('%Y-%m-%d')}"
+        if (start and end)
+        else "Toute la période"
+    )
+
+    pays_txt = ", ".join(filters_dict.get("countries", [])) \
+        if filters_dict.get("countries") else "Tous"
+
+    seuil_txt = f"{min_amount:,}" if min_amount else "Aucun"
+
+    st.markdown(f"""
+    **Période d'analyse** : `{periode_txt}`  
+    **Pays** : `{pays_txt}`  
+    **Seuil minimum de transaction** : `{seuil_txt}`  
+    **Mode retours** : `{filters_dict.get("returns_mode")}`  
+    **Type client** : `{filters_dict.get("customer_type")}`  
+    **Unité de temps** : `{filters_dict.get("unit_of_time")}`  
+    """)
 
 # Statistiques des cohortes
 num_cohorts = df_cohorts_filtered['CohortMonth'].nunique()
@@ -294,6 +365,53 @@ with col1:
 
     st.plotly_chart(fig_heatmap, use_container_width=True)
 
+st.divider()
+
+# ======================================================================
+# 🔍 Focus sur une cohorte
+# ======================================================================
+st.header("Focus sur une Cohorte")
+
+# Liste des cohortes disponibles
+all_cohorts = sorted(df_cohorts_filtered["CohortMonth"].unique())
+all_cohorts_str = [str(c) for c in all_cohorts]
+
+selected = st.selectbox(
+    "Choisir une cohorte :",
+    all_cohorts_str,
+    help="Sélectionnez une cohorte pour visualiser son évolution de revenu."
+)
+
+# Filtrer la cohorte choisie
+selected_period = pd.Period(selected, freq='M')
+df_focus = df_cohorts_filtered[df_cohorts_filtered["CohortMonth"] == selected_period]
+
+# Calcul CA cumulé par âge de cohorte
+df_ca = (
+    df_focus.groupby("CohortIndex")["TotalAmount"]
+    .sum()
+    .cumsum()
+    .reset_index()
+)
+
+fig = px.line(
+    df_ca,
+    x="CohortIndex",
+    y="TotalAmount",
+    markers=True,
+    title=f"CA cumulé – Cohorte {selected}"
+)
+
+fig.update_layout(
+    xaxis_title="Âge de cohorte (mois)",
+    yaxis_title="CA cumulé (GBP)",
+    height=400
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
+# Effectif de la cohorte
+st.caption(f"n = {df_focus['Customer ID'].nunique():,} clients dans la cohorte sélectionnée.")
 st.divider()
 
 

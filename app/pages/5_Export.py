@@ -453,6 +453,58 @@ st.info("""
 
 st.divider()
 
+# ==============================================================================
+# LISTE ACTIVABLE CRM
+# ==============================================================================
+
+st.header("Liste Activable CRM")
+
+df_rfm = st.session_state.get("df_rfm", pd.DataFrame())
+
+if not df_rfm.empty:
+
+    st.markdown("""
+    Sélectionnez les segments à inclure dans la **liste activable CRM**.
+    Cette liste contient les clients prêts pour activation marketing.
+    """)
+
+    # Segments activables par défaut
+    # Segments réellement disponibles dans df_rfm
+    segments_available = sorted(df_rfm["Segment"].unique())
+
+    # Segments recommandés par défaut (si disponibles)
+    default_target_segments = ["Champions", "Loyal Customers", "At Risk"]
+
+    # Filtrer pour ne garder que ceux présents dans les options
+    default_segments_filtered = [
+        seg for seg in default_target_segments if seg in segments_available
+    ]
+
+    segs = st.multiselect(
+        "Segments à inclure dans la liste activable",
+        segments_available,
+        default=default_segments_filtered
+    )
+
+    # Construction de la liste activable
+    df_act = df_rfm[df_rfm["Segment"].isin(segs)][[
+        "Customer ID", "Segment", "R_Score", "F_Score", "M_Score",
+        "Recency", "Frequency", "Monetary"
+    ]]
+
+    st.dataframe(df_act, use_container_width=True)
+
+    st.download_button(
+        "Télécharger liste activable (CSV)",
+        df_act.to_csv(index=False).encode("utf-8"),
+        file_name=f"liste_activable_{datetime.now().strftime('%Y%m%d')}.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
+
+else:
+    st.info("Aucune segmentation RFM disponible.")
+
 
 # ==============================================================================
 # INFORMATIONS ET AIDE
