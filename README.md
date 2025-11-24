@@ -62,7 +62,7 @@ Application d'analyse de donnees marketing developpee avec Streamlit, permettant
 
 1. Cloner le depot :
 ```bash
-git clone <url-du-depot>
+git clone https://github.com/Alfred0404/data_visualisation_projet_final.git
 cd projet_final
 ```
 
@@ -170,6 +170,14 @@ Les parametres de l'application peuvent etre ajustes dans `config.py` :
 
 Projet realise dans le cadre du cours de Data Visualisation - ECE Paris
 
-## Licence
+[Alfred de Vulpian](https://github.com/alfred0404)
 
-Ce projet est a usage academique.
+[Nicolas DONIER](https://github.com/reinod15)
+
+[Thibault GAREL](https://github.com/Thibault-GAREL)
+
+[Maxime DUTERTRE](https://github.com/madmax0978)
+
+[Alexandre GARREAU](https://github.com/AlexDreams)
+
+[Kimarjie LUCENARODRIGO](https://github.com/kimarjie)
