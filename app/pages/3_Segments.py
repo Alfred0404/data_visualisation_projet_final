@@ -21,10 +21,7 @@ import config
 import utils
 
 
-# ==============================================================================
 # FONCTIONS AUXILIAIRES
-# ==============================================================================
-
 @st.cache_data
 def calculate_rfm_cached(df: pd.DataFrame) -> pd.DataFrame:
     """Calcule RFM avec cache pour optimiser les performances."""
@@ -173,10 +170,7 @@ def create_segment_color_map():
     }
 
 
-# ==============================================================================
 # CONFIGURATION DE LA PAGE
-# ==============================================================================
-
 st.set_page_config(
     page_title="Segmentation RFM - Marketing Analytics",
     page_icon=":material/target:",
@@ -184,10 +178,7 @@ st.set_page_config(
 )
 
 
-# ==============================================================================
 # EN-TETE DE LA PAGE
-# ==============================================================================
-
 st.title("Segmentation RFM")
 # Badge selon le mode retours actif
 if st.session_state.get("returns_mode") == "Exclure":
@@ -209,10 +200,7 @@ les clients les plus précieux et de personnaliser les stratégies marketing.
 st.divider()
 
 
-# ==============================================================================
 # EXPLICATION RFM
-# ==============================================================================
-
 with st.expander("Comprendre la méthodologie RFM", expanded=False):
     st.markdown("""
     ### Qu'est-ce que le RFM ?
@@ -220,27 +208,27 @@ with st.expander("Comprendre la méthodologie RFM", expanded=False):
     Le **RFM** est une méthode de segmentation client basée sur trois dimensions :
 
     - **R - Recency (Récence)** : Quand le client a-t-il acheté pour la dernière fois ?
-      - Plus récent = meilleur score (4)
+      - Plus récent = meilleur score (5)
       - Moins récent = score faible (1)
 
     - **F - Frequency (Fréquence)** : Combien de fois le client a-t-il acheté ?
-      - Plus de transactions = meilleur score (4)
+      - Plus de transactions = meilleur score (5)
       - Peu de transactions = score faible (1)
 
     - **M - Monetary (Montant)** : Combien le client a-t-il dépensé au total ?
-      - Montant élevé = meilleur score (4)
+      - Montant élevé = meilleur score (5)
       - Montant faible = score faible (1)
 
     ### Comment ça fonctionne ?
 
-    1. Chaque client reçoit un score de 1 à 4 pour chaque dimension
-    2. Les scores sont combinés (ex: "444" = meilleur client)
+    1. Chaque client reçoit un score de 1 à 5 pour chaque dimension
+    2. Les scores sont combinés (ex: "555" = meilleur client)
     3. Les clients sont regroupés en segments marketing
     4. Chaque segment nécessite une stratégie adaptée
 
     ### Les segments principaux
 
-    - **Champions (444)** : Meilleurs clients - fidélisation premium
+    - **Champions (555)** : Meilleurs clients - fidélisation premium
     - **Loyal Customers** : Clients fidèles - programmes de fidélité
     - **Potential Loyalists** : Clients prometteurs - nurturing
     - **At Risk** : Clients à risque - campagnes de réactivation
@@ -250,27 +238,20 @@ with st.expander("Comprendre la méthodologie RFM", expanded=False):
 st.divider()
 
 
-# ==============================================================================
 # FILTRES SPECIFIQUES
-# ==============================================================================
+with st.sidebar:
+    st.subheader("Filtres - RFM")
 
 
 
 
-
-# ==============================================================================
 # VERIFICATION DES DONNEES
-# ==============================================================================
-
 if not st.session_state.get('data_loaded', False):
     st.warning("Veuillez d'abord charger les données depuis la page d'accueil.")
     st.stop()
 
 
-# ==============================================================================
 # CALCUL RFM
-# ==============================================================================
-
 st.header("Calcul des Scores RFM")
 
 df = st.session_state.get('df_clean', None)
@@ -361,6 +342,10 @@ with st.expander("Filtres actifs appliqués", expanded=True):
     """)
 
 if df is not None:
+    # Appliquer les filtres globaux
+    active_filters = st.session_state.get('active_filters', {})
+    df = utils.apply_global_filters(df, active_filters)
+
     try:
         # Calculer RFM avec cache
         with st.spinner("Calcul des scores RFM en cours..."):
@@ -448,10 +433,7 @@ with colB:
 st.divider()
 
 
-# ==============================================================================
 # DISTRIBUTION DES SEGMENTS
-# ==============================================================================
-
 st.header("Distribution des Segments")
 
 col1, col2 = st.columns([2, 1])
@@ -512,10 +494,7 @@ with col2:
 st.divider()
 
 
-# ==============================================================================
 # MATRICE RFM
-# ==============================================================================
-
 st.header("Matrice RFM")
 
 st.markdown("""
@@ -586,10 +565,7 @@ else:
 st.divider()
 
 
-# ==============================================================================
 # PROFILS DETAILLES DES SEGMENTS
-# ==============================================================================
-
 st.header("Profils Détaillés des Segments")
 
 # Liste des segments disponibles
@@ -599,6 +575,7 @@ segments_available = sorted(df_rfm['Segment'].unique().tolist())
 selected_segment = st.selectbox(
     "Choisir un segment à analyser",
     segments_available,
+    index=3,
     help="Sélectionner un segment pour voir son profil détaillé"
 )
 
@@ -767,10 +744,7 @@ if selected_segment:
 st.divider()
 
 
-# ==============================================================================
 # TABLE COMPLETE RFM
-# ==============================================================================
-
 st.header("Tableau Complet RFM")
 
 st.markdown("""
@@ -882,10 +856,7 @@ except Exception as e:
 st.divider()
 
 
-# ==============================================================================
 # RECOMMANDATIONS PAR SEGMENT
-# ==============================================================================
-
 st.header("Recommandations Marketing par Segment")
 
 with st.expander("Stratégies recommandées", expanded=True):
@@ -918,36 +889,35 @@ with st.expander("Stratégies recommandées", expanded=True):
 st.divider()
 
 
-# ==============================================================================
 # EXPORT
-# ==============================================================================
-
 st.header("Export des Analyses RFM")
 
 col1, col2 = st.columns(2)
 
 with col1:
     try:
-        # Export RFM complet
-        csv_rfm = df_rfm_full.to_csv(index=False).encode('utf-8')
+        # Export RFM complet avec fonction robuste
+        csv_rfm = utils.convert_df_to_csv(df_rfm_full)
 
         st.download_button(
             label="Télécharger scores RFM (CSV)",
             data=csv_rfm,
             file_name=f"rfm_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
-            use_container_width=True
+            use_container_width=True,
+            type="primary"
         )
 
         # Export du résumé par segment
-        csv_summary = segment_summary.to_csv(index=False).encode('utf-8')
+        csv_summary = utils.convert_df_to_csv(segment_summary)
 
         st.download_button(
             label="Télécharger résumé segments (CSV)",
             data=csv_summary,
             file_name=f"rfm_segments_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
-            use_container_width=True
+            use_container_width=True,
+            type="primary"
         )
 
     except Exception as e:
@@ -964,9 +934,6 @@ with col2:
     """)
 
 
-# ==============================================================================
 # FOOTER
-# ==============================================================================
-
 st.divider()
 st.caption("Page Segmentation RFM - Dernière mise à jour : " + datetime.now().strftime("%Y-%m-%d %H:%M"))

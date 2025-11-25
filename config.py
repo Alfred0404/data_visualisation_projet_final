@@ -9,9 +9,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 
-# ==============================================================================
 # CHEMINS DES FICHIERS ET DOSSIERS
-# ==============================================================================
 
 # Racine du projet
 PROJECT_ROOT = Path(__file__).parent.absolute()
@@ -47,9 +45,7 @@ EXPORT_DATA_DIR = EXPORT_DIR / "data"
 EXPORT_CHARTS_DIR = EXPORT_DIR / "charts"
 
 
-# ==============================================================================
 # COLONNES DU DATASET
-# ==============================================================================
 
 # Colonnes attendues dans le dataset Online Retail II
 REQUIRED_COLUMNS = [
@@ -72,9 +68,7 @@ CALCULATED_COLUMNS = {
 }
 
 
-# ==============================================================================
 # PARAMETRES DE NETTOYAGE DES DONNEES
-# ==============================================================================
 
 # Préfixe des factures d'annulation
 CANCELLATION_PREFIX = "C"
@@ -85,9 +79,7 @@ MIN_PRICE = 0
 MIN_TOTAL_AMOUNT = 0
 
 
-# ==============================================================================
 # PARAMETRES RFM (Recency, Frequency, Monetary)
-# ==============================================================================
 
 # Date de référence pour le calcul de la récence (peut être modifiée)
 # Par défaut : date maximale dans les données
@@ -157,15 +149,13 @@ RFM_SEGMENTS = {
 }
 
 
-# ==============================================================================
 # PARAMETRES CLV (Customer Lifetime Value)
-# ==============================================================================
 
 # Taux de rétention par défaut (à calculer ou ajuster selon les données)
-DEFAULT_RETENTION_RATE = 0.30  # 30%
+DEFAULT_RETENTION_RATE = 0.30  
 
 # Taux d'actualisation (discount rate) pour les calculs CLV
-DEFAULT_DISCOUNT_RATE = 0.10  # 10% annuel
+DEFAULT_DISCOUNT_RATE = 0.10  
 
 # Période d'analyse en mois
 CLV_ANALYSIS_PERIOD_MONTHS = 12
@@ -174,9 +164,7 @@ CLV_ANALYSIS_PERIOD_MONTHS = 12
 CLV_FORECAST_HORIZON_YEARS = 3
 
 
-# ==============================================================================
 # PARAMETRES D'ANALYSE DES COHORTES
-# ==============================================================================
 
 # Format d'affichage des cohortes
 COHORT_DATE_FORMAT = "%Y-%m"
@@ -188,19 +176,17 @@ MIN_COHORT_SIZE = 10
 COHORT_ANALYSIS_PERIODS = [0, 1, 3, 6, 12]  # M0, M1, M3, M6, M12
 
 
-# ==============================================================================
 # PARAMETRES DE VISUALISATION
-# ==============================================================================
 
 # Palette de couleurs principale (cohérence visuelle)
 COLOR_PALETTE = {
-    "primary": "#1f77b4",      # Bleu
-    "secondary": "#ff7f0e",    # Orange
-    "success": "#2ca02c",      # Vert
-    "warning": "#ff9800",      # Jaune-orange
-    "danger": "#d62728",       # Rouge
-    "info": "#17a2b8",         # Cyan
-    "neutral": "#7f7f7f"       # Gris
+    "primary": "#1f77b4",      
+    "secondary": "#ff7f0e",   
+    "success": "#2ca02c",     
+    "warning": "#ff9800",      
+    "danger": "#d62728",       
+    "info": "#17a2b8",         
+    "neutral": "#7f7f7f"       
 }
 
 # Palette séquentielle pour heatmaps
@@ -219,9 +205,7 @@ DEFAULT_FIGURE_SIZE = (12, 6)
 EXPORT_DPI = 300
 
 
-# ==============================================================================
 # PARAMETRES STREAMLIT
-# ==============================================================================
 
 # Configuration de la page Streamlit
 PAGE_CONFIG = {
@@ -245,9 +229,7 @@ Cette application permet d'analyser les données de ventes pour:
 """
 
 
-# ==============================================================================
 # PARAMETRES DE FILTRAGE
-# ==============================================================================
 
 # Pays à inclure par défaut (peut être modifié dans l'interface)
 DEFAULT_COUNTRIES = None  # None = tous les pays
@@ -259,36 +241,32 @@ DEFAULT_DATE_RANGE = None  # None = toute la période disponible
 DEFAULT_MIN_TRANSACTION_AMOUNT = 0
 
 
-# ==============================================================================
 # PARAMETRES DE SIMULATION
-# ==============================================================================
 
 # Scénarios de simulation prédéfinis
 SIMULATION_SCENARIOS = {
     "optimistic": {
-        "retention_increase": 0.10,  # +10%
-        "aov_increase": 0.15,        # +15% Average Order Value
-        "frequency_increase": 0.20,  # +20%
+        "retention_increase": 0.10,  
+        "aov_increase": 0.15,        
+        "frequency_increase": 0.20,  
         "label": "Scénario Optimiste"
     },
     "realistic": {
-        "retention_increase": 0.05,  # +5%
-        "aov_increase": 0.08,        # +8%
-        "frequency_increase": 0.10,  # +10%
+        "retention_increase": 0.05,  
+        "aov_increase": 0.08,        
+        "frequency_increase": 0.10,  
         "label": "Scénario Réaliste"
     },
     "conservative": {
-        "retention_increase": 0.02,  # +2%
-        "aov_increase": 0.03,        # +3%
-        "frequency_increase": 0.05,  # +5%
+        "retention_increase": 0.02,  
+        "aov_increase": 0.03,        
+        "frequency_increase": 0.05,  
         "label": "Scénario Conservateur"
     }
 }
 
 
-# ==============================================================================
 # FORMATS D'EXPORT
-# ==============================================================================
 
 # Formats de dates pour les exports
 EXPORT_DATE_FORMAT = "%Y-%m-%d"
@@ -301,16 +279,14 @@ CSV_SEPARATOR = ","
 FILE_ENCODING = "utf-8"
 
 
-# ==============================================================================
 # CONSTANTES METIER
-# ==============================================================================
 
 # Seuils d'alerte pour les KPIs
 KPI_THRESHOLDS = {
-    "churn_rate_warning": 0.30,      # 30% de churn = alerte
-    "churn_rate_critical": 0.50,     # 50% de churn = critique
-    "retention_rate_good": 0.40,     # 40% de rétention = bon
-    "retention_rate_excellent": 0.60 # 60% de rétention = excellent
+    "churn_rate_warning": 0.30,      
+    "churn_rate_critical": 0.50,     
+    "retention_rate_good": 0.40,     
+    "retention_rate_excellent": 0.60 
 }
 
 # Périodes de référence pour les comparaisons
@@ -321,9 +297,7 @@ COMPARISON_PERIODS = {
 }
 
 
-# ==============================================================================
 # VALIDATION DE LA CONFIGURATION
-# ==============================================================================
 
 def validate_config():
     """
@@ -341,9 +315,7 @@ def validate_config():
     return True
 
 
-# ==============================================================================
 # INITIALISATION
-# ==============================================================================
 
 if __name__ == "__main__":
     print("Configuration du projet Marketing Decision Support")

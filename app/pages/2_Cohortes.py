@@ -21,10 +21,7 @@ import config
 import utils
 
 
-# ==============================================================================
 # FONCTIONS HELPERS POUR LE CACHING
-# ==============================================================================
-
 @st.cache_data(show_spinner=False)
 def cached_create_cohorts(df: pd.DataFrame) -> pd.DataFrame:
     """Cache la creation des cohortes pour optimiser les performances."""
@@ -62,10 +59,7 @@ def cached_cohort_summary(df_cohorts: pd.DataFrame) -> pd.DataFrame:
     return summary
 
 
-# ==============================================================================
 # CONFIGURATION DE LA PAGE
-# ==============================================================================
-
 st.set_page_config(
     page_title="Analyse de Cohortes - Marketing Analytics",
     page_icon=":material/bar_chart:",
@@ -73,10 +67,7 @@ st.set_page_config(
 )
 
 
-# ==============================================================================
 # EN-TETE DE LA PAGE
-# ==============================================================================
-
 st.title("Analyse de Cohortes")
 # Badge selon le mode retours actif
 if st.session_state.get("returns_mode") == "Exclure":
@@ -100,10 +91,7 @@ durant la meme periode et d'evaluer leur comportement au fil du temps.
 st.divider()
 
 
-# ==============================================================================
 # VERIFICATION DES DONNEES
-# ==============================================================================
-
 if not st.session_state.get('data_loaded', False):
     st.warning("Veuillez d'abord charger les donnees depuis la page d'accueil.")
     st.stop()
@@ -144,11 +132,11 @@ filters_dict["unit_of_time"] = st.session_state.get("unit_of_time", "M")
 # Application des filtres globaux
 df = utils.apply_filters(df, filters_dict)
 
+# Appliquer les filtres globaux
+active_filters = st.session_state.get('active_filters', {})
+df = utils.apply_global_filters(df, active_filters)
 
-# ==============================================================================
 # FILTRES SPECIFIQUES
-# ==============================================================================
-
 # Filtrer les donnees avec CustomerID pour l'analyse de cohortes
 df_with_customers = df[df['HasCustomerID']].copy()
 
@@ -202,10 +190,7 @@ with st.sidebar:
     st.divider()
 
 
-# ==============================================================================
 # CREATION DES COHORTES
-# ==============================================================================
-
 st.header("Creation des Cohortes")
 
 with st.spinner("Creation des cohortes en cours..."):
@@ -288,10 +273,7 @@ with col4:
 st.divider()
 
 
-# ==============================================================================
 # HEATMAP DE RETENTION
-# ==============================================================================
-
 st.header("Heatmap de Retention")
 
 st.markdown("""
@@ -415,10 +397,7 @@ st.caption(f"n = {df_focus['Customer ID'].nunique():,} clients dans la cohorte s
 st.divider()
 
 
-# ==============================================================================
 # COURBES DE RETENTION
-# ==============================================================================
-
 st.header("Courbes de Retention par Cohorte")
 
 st.markdown("""
@@ -498,10 +477,7 @@ st.plotly_chart(fig_curves, use_container_width=True)
 st.divider()
 
 
-# ==============================================================================
 # ANALYSE COMPARATIVE
-# ==============================================================================
-
 st.header("Analyse Comparative des Cohortes")
 
 # Extraire les taux de retention pour M1 et M3
@@ -604,10 +580,7 @@ with col2:
 st.divider()
 
 
-# ==============================================================================
 # METRIQUES DE RETENTION
-# ==============================================================================
-
 st.header("Metriques de Retention Globales")
 
 col1, col2, col3 = st.columns(3)
@@ -650,7 +623,6 @@ with col1:
 with col2:
     st.subheader("Meilleure/Pire cohorte")
 
-    # Identifier la meilleure et pire cohorte sur la base de M3 (ou M1 si M3 indisponible)
     if len(retention_m3) > 0:
         ref_retention = retention_m3
         ref_period = "M3"
@@ -753,10 +725,7 @@ with col3:
 st.divider()
 
 
-# ==============================================================================
 # TABLE DETAILLEE DES COHORTES
-# ==============================================================================
-
 st.header("Tableau Detaille des Cohortes")
 
 st.markdown("""
@@ -850,10 +819,7 @@ st.dataframe(
 st.divider()
 
 
-# ==============================================================================
 # INSIGHTS ET RECOMMANDATIONS
-# ==============================================================================
-
 st.header("Insights et Recommandations")
 
 with st.expander("Analyse des cohortes", expanded=True):
@@ -957,80 +923,70 @@ with st.expander("Analyse des cohortes", expanded=True):
 st.divider()
 
 
-# ==============================================================================
 # EXPORT
-# ==============================================================================
-
 st.header("Export des Analyses")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    if st.button("Exporter matrice de retention (CSV)", use_container_width=True):
-        try:
-            # Preparer la matrice pour l'export
-            export_matrix = retention_matrix.copy()
-            export_matrix.index = export_matrix.index.astype(str)
+    st.subheader("Matrice de rétention")
+    try:
+        # Preparer la matrice pour l'export
+        export_matrix = retention_matrix.copy()
+        export_matrix.index = export_matrix.index.astype(str)
 
-            # Convertir en CSV
-            csv = export_matrix.to_csv(sep=config.CSV_SEPARATOR)
+        # Convertir en CSV avec reset_index pour inclure l'index comme colonne
+        csv = export_matrix.reset_index().to_csv(index=False, sep=config.CSV_SEPARATOR).encode('utf-8')
 
-            # Telecharger
-            st.download_button(
-                label="Telecharger CSV",
-                data=csv,
-                file_name=f"matrice_retention_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv"
-            )
-            st.success("Matrice prete a telecharger !")
-        except Exception as e:
-            st.error(f"Erreur lors de l'export : {str(e)}")
+        # Telecharger
+        st.download_button(
+            label="Télécharger matrice (CSV)",
+            data=csv,
+            file_name=f"matrice_retention_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            type="primary"
+        )
+    except Exception as e:
+        st.error(f"Erreur lors de l'export : {str(e)}")
 
 with col2:
-    if st.button("Exporter tableau cohortes (CSV)", use_container_width=True):
-        try:
-            # Convertir en CSV
-            csv = cohort_summary_display.to_csv(index=False, sep=config.CSV_SEPARATOR)
+    st.subheader("Tableau des cohortes")
+    try:
+        # Convertir en CSV
+        csv = utils.convert_df_to_csv(cohort_summary_display)
 
-            # Telecharger
-            st.download_button(
-                label="Telecharger CSV",
-                data=csv,
-                file_name=f"tableau_cohortes_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv"
-            )
-            st.success("Tableau pret a telecharger !")
-        except Exception as e:
-            st.error(f"Erreur lors de l'export : {str(e)}")
+        # Telecharger
+        st.download_button(
+            label="Télécharger tableau (CSV)",
+            data=csv,
+            file_name=f"tableau_cohortes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            type="primary"
+        )
+    except Exception as e:
+        st.error(f"Erreur lors de l'export : {str(e)}")
 
 with col3:
-    if st.button("Exporter donnees completes (CSV)", use_container_width=True):
-        try:
-            # Exporter le dataframe complet des cohortes
-            export_df = df_cohorts_filtered.copy()
+    st.subheader("Données complètes")
+    try:
+        # Exporter le dataframe complet des cohortes avec la fonction robuste
+        csv = utils.convert_df_to_csv(df_cohorts_filtered)
 
-            # Convertir les colonnes Period en string
-            export_df['CohortMonth'] = export_df['CohortMonth'].astype(str)
-            export_df['InvoiceMonth'] = export_df['InvoiceMonth'].astype(str)
-
-            # Convertir en CSV
-            csv = export_df.to_csv(index=False, sep=config.CSV_SEPARATOR)
-
-            # Telecharger
-            st.download_button(
-                label="Telecharger CSV",
-                data=csv,
-                file_name=f"cohortes_complet_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv"
-            )
-            st.success("Donnees pretes a telecharger !")
-        except Exception as e:
-            st.error(f"Erreur lors de l'export : {str(e)}")
+        # Telecharger
+        st.download_button(
+            label="Télécharger données (CSV)",
+            data=csv,
+            file_name=f"cohortes_complet_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            type="primary"
+        )
+    except Exception as e:
+        st.error(f"Erreur lors de l'export : {str(e)}")
 
 
-# ==============================================================================
 # FOOTER
-# ==============================================================================
-
 st.divider()
 st.caption("Page Analyse de Cohortes - Derniere mise a jour : " + datetime.now().strftime("%Y-%m-%d %H:%M"))

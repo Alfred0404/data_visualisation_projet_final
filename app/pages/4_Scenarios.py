@@ -20,10 +20,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 import config
 import utils
 
-# ==============================================================================
 # CONFIGURATION DE LA PAGE
-# ==============================================================================
-
 st.set_page_config(
     page_title="Simulation de Scenarios - Marketing Analytics",
     page_icon=":material/science:",
@@ -31,10 +28,7 @@ st.set_page_config(
 )
 
 
-# ==============================================================================
 # FONCTIONS UTILITAIRES
-# ==============================================================================
-
 def format_currency(value):
     """Formate une valeur monetaire en livres sterling."""
     return f"£{value:,.0f}"
@@ -285,10 +279,7 @@ def generate_insights(results, params):
     return insights
 
 
-# ==============================================================================
 # EN-TETE DE LA PAGE
-# ==============================================================================
-
 st.title("Simulation de Scenarios Marketing")
 st.markdown("""
 Simulez l'impact de differentes strategies marketing sur vos KPIs
@@ -298,24 +289,22 @@ et projetez les revenus futurs bases sur des hypotheses d'amelioration.
 st.divider()
 
 
-# ==============================================================================
 # VERIFICATION DES DONNEES
-# ==============================================================================
-
 if not st.session_state.get('data_loaded', False):
     st.warning("Veuillez d'abord charger les donnees depuis la page d'accueil.")
     st.stop()
 
 
-# ==============================================================================
 # KPIS ACTUELS (BASELINE)
-# ==============================================================================
-
 st.header("Situation Actuelle (Baseline)")
 
 df = st.session_state.get('df_clean', None)
 
 if df is not None:
+    # Appliquer les filtres globaux
+    active_filters = st.session_state.get('active_filters', {})
+    df = utils.apply_global_filters(df, active_filters)
+
     # Calculer les KPIs actuels
     with st.spinner("Calcul des KPIs actuels..."):
         baseline_kpis = utils.calculate_kpis(df)
@@ -392,10 +381,7 @@ else:
 st.divider()
 
 
-# ==============================================================================
 # SELECTION DU SCENARIO
-# ==============================================================================
-
 st.header("Configuration du Scenario")
 
 # Choix entre scenarios predefinis ou personnalise
@@ -412,10 +398,7 @@ st.divider()
 simulation_params = None
 
 if scenario_type == "Scenarios predefinis":
-    # ==============================================================================
     # SCENARIOS PREDEFINIS
-    # ==============================================================================
-
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -494,10 +477,7 @@ if scenario_type == "Scenarios predefinis":
             st.session_state.simulation_params = simulation_params
 
 else:
-    # ==============================================================================
     # SCENARIO PERSONNALISE
-    # ==============================================================================
-
     st.subheader("Parametres personnalises")
 
     col1, col2 = st.columns(2)
@@ -665,10 +645,7 @@ else:
 st.divider()
 
 
-# ==============================================================================
 # RESULTATS DE LA SIMULATION
-# ==============================================================================
-
 st.header("Resultats de la Simulation")
 
 # Verifier si une simulation a ete lancee
@@ -919,10 +896,7 @@ else:
 st.divider()
 
 
-# ==============================================================================
 # COMPARAISON DE SCENARIOS
-# ==============================================================================
-
 st.header("Comparaison de Scenarios")
 
 st.markdown("""
@@ -1031,17 +1005,15 @@ else:
 st.divider()
 
 
-# ==============================================================================
 # EXPORT
-# ==============================================================================
-
 st.header("Export de la Simulation")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    if st.button("Exporter resultats (CSV)", use_container_width=True):
-        if 'simulation_results' in st.session_state:
+    st.subheader("Résultats simulation")
+    if 'simulation_results' in st.session_state:
+        try:
             results = st.session_state.simulation_results
 
             # Creer un DataFrame avec les resultats
@@ -1078,34 +1050,41 @@ with col1:
 
             export_df = pd.DataFrame(export_data)
 
-            # Convertir en CSV
-            csv = export_df.to_csv(index=False)
+            # Convertir en CSV avec fonction robuste
+            csv = utils.convert_df_to_csv(export_df)
 
             st.download_button(
-                label="Telecharger CSV",
+                label="Télécharger résultats (CSV)",
                 data=csv,
                 file_name=f"simulation_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
-                use_container_width=True
+                use_container_width=True,
+                type="primary"
             )
-        else:
-            st.warning("Aucune simulation a exporter")
+        except Exception as e:
+            st.error(f"Erreur lors de l'export: {str(e)}")
+    else:
+        st.info("Aucune simulation à exporter. Lancez d'abord une simulation ci-dessus.")
 
 with col2:
-    if st.button("Exporter comparaison (CSV)", use_container_width=True):
-        if len(st.session_state.saved_scenarios) > 0:
-            # Exporter le tableau de comparaison
-            csv = comparison_df.to_csv(index=False)
+    st.subheader("Comparaison scénarios")
+    if len(st.session_state.saved_scenarios) > 0:
+        try:
+            # Exporter le tableau de comparaison avec fonction robuste
+            csv = utils.convert_df_to_csv(comparison_df)
 
             st.download_button(
-                label="Telecharger Comparaison CSV",
+                label="Télécharger comparaison (CSV)",
                 data=csv,
                 file_name=f"scenarios_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
-                use_container_width=True
+                use_container_width=True,
+                type="primary"
             )
-        else:
-            st.warning("Aucun scenario sauvegarde a exporter")
+        except Exception as e:
+            st.error(f"Erreur lors de l'export: {str(e)}")
+    else:
+        st.info("Aucun scénario sauvegardé à exporter. Sauvegardez d'abord des scénarios.")
 
 with col3:
     if st.button("Guide d'interpretation", use_container_width=True):
@@ -1122,9 +1101,6 @@ with col3:
         """)
 
 
-# ==============================================================================
 # FOOTER
-# ==============================================================================
-
 st.divider()
 st.caption("Page Simulation de Scenarios - Derniere mise a jour : " + datetime.now().strftime("%Y-%m-%d %H:%M"))

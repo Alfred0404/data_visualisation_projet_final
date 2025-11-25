@@ -21,10 +21,7 @@ import config
 import utils
 
 
-# ==============================================================================
 # CONFIGURATION DE LA PAGE
-# ==============================================================================
-
 st.set_page_config(
     page_title="Overview - Marketing Analytics",
     page_icon=":material/home:",
@@ -32,93 +29,7 @@ st.set_page_config(
 )
 
 
-# ==============================================================================
-# FONCTIONS UTILITAIRES LOCALES
-# ==============================================================================
-
-def get_filtered_df():
-    """
-    Récupère le df nettoyé en appliquant les filtres globaux
-    définis dans st.session_state.active_filters.
-    """
-    df_clean = st.session_state.get("df_clean", None)
-    if df_clean is None:
-        return None, {}
-
-    active_filters = st.session_state.get("active_filters", {})
-
-    filters_dict = {}
-
-    # Conversion des filtres globaux en format attendu par utils.apply_filters
-    date_range = active_filters.get("date_range")
-    if date_range and isinstance(date_range, (list, tuple)) and len(date_range) == 2:
-        start_date, end_date = date_range
-        filters_dict["start_date"] = start_date
-        filters_dict["end_date"] = end_date
-
-    countries = active_filters.get("countries")
-    if countries:
-        filters_dict["countries"] = countries
-
-    min_amount = active_filters.get("min_amount")
-    if min_amount is not None:
-        filters_dict["min_amount"] = min_amount
-    # Ajout des filtres avancés
-
-    # 🔥 Ajout obligatoire
-    filters_dict["returns_mode"] = st.session_state.get("returns_mode", "Inclure")
-    filters_dict["customer_type"] = st.session_state.get("customer_type", "Tous")
-    filters_dict["unit_of_time"] = st.session_state.get("unit_of_time")
-
-
-    df_filtered = utils.apply_filters(df_clean, filters_dict)
-
-    return df_filtered, filters_dict
-
-
-def render_active_filters(filters_dict, n_rows, n_total_rows):
-    """
-    Affiche un résumé des filtres actifs + effectifs.
-    """
-    with st.expander("Filtres actifs & périmètre d'analyse", expanded=True):
-        # Période
-        start = filters_dict.get("start_date")
-        end = filters_dict.get("end_date")
-        if start or end:
-            periode = f"{start.strftime('%Y-%m-%d') if start else 'début'} → {end.strftime('%Y-%m-%d') if end else 'fin'}"
-        else:
-            periode = "Toute la période disponible"
-
-        # Pays
-        countries = filters_dict.get("countries")
-        if countries:
-            pays_txt = ", ".join(sorted(countries))
-        else:
-            pays_txt = "Tous les pays"
-
-        # Montant minimum
-        min_amount = filters_dict.get("min_amount")
-        if min_amount:
-            montant_txt = f"{min_amount:,.0f} (TotalAmount >= {min_amount})"
-        else:
-            montant_txt = "Aucun seuil (0)"
-
-        st.markdown(
-            f"""
-            **Périmètre analysé :**
-            - 📅 **Période** : `{periode}`
-            - 🌍 **Pays** : `{pays_txt}`
-            - 💰 **Montant minimum de transaction** : `{montant_txt}`  
-            
-            **Effectif :** {n_rows:,} lignes filtrées sur {n_total_rows:,} au total.
-            """
-        )
-
-
-# ==============================================================================
 # EN-TETE DE LA PAGE
-# ==============================================================================
-
 st.title("Vue d'ensemble - KPIs Marketing")
 st.markdown("""
 Cette page présente une vue synthétique de vos principaux indicateurs de performance
@@ -128,23 +39,7 @@ et l'évolution de votre activité commerciale, en tenant compte des **filtres g
 st.divider()
 
 
-# ==============================================================================
-# FILTRES SPECIFIQUES A LA PAGE (optionnel pour l'instant)
-# ==============================================================================
-
-with st.sidebar:
-    st.subheader("Filtres - Overview")
-
-    st.caption("Les filtres principaux (période, pays, montant) se règlent dans la barre latérale de l'application.")
-    # TODO (optionnel) : ajouter des filtres de comparaison (MoM, QoQ, YoY) ou focus segment ici.
-
-    st.divider()
-
-
-# ==============================================================================
 # VERIFICATION DES DONNEES
-# ==============================================================================
-
 if not st.session_state.get('data_loaded', False):
     st.warning("Veuillez d'abord charger les données depuis la page d'accueil.")
     st.stop()
@@ -178,10 +73,7 @@ elif st.session_state.get("returns_mode") == "Neutraliser":
 st.divider()
 
 
-# ==============================================================================
 # KPIS PRINCIPAUX
-# ==============================================================================
-
 st.header("KPIs Principaux")
 
 # Recalcule les KPIs sur le périmètre filtré
@@ -189,8 +81,14 @@ kpis = st.session_state.get('kpis', {})
 kpis = utils.calculate_kpis(df)
 st.session_state.kpis = kpis
 
-total_customers = kpis.get('total_customers', 0)
-total_transactions = kpis.get('total_transactions', 0)
+if df is not None:
+    # Appliquer les filtres globaux
+    active_filters = st.session_state.get('active_filters', {})
+    df = utils.apply_global_filters(df, active_filters)
+    kpis = st.session_state.get('kpis', {})
+    if not kpis:
+        kpis = utils.calculate_kpis(df)
+        st.session_state.kpis = kpis
 
 # North Star simple : CA moyen par client (sur la période filtrée)
 north_star = kpis['total_revenue'] / total_customers if total_customers > 0 else 0
@@ -371,10 +269,7 @@ if df_rfm is not None and not df_rfm.empty:
     st.divider()
 
 
-# ==============================================================================
 # VISUALISATIONS PRINCIPALES
-# ==============================================================================
-
 st.header("Évolution de l'Activité")
 
 # Layout en 2 colonnes
@@ -398,10 +293,7 @@ st.caption(f"n = {df['Customer ID'].nunique():,} clients uniques sur la période
 st.divider()
 
 
-# ==============================================================================
 # ANALYSE PAR PAYS
-# ==============================================================================
-
 st.header("Répartition Géographique")
 
 col1, col2 = st.columns([2, 1])
@@ -432,10 +324,7 @@ with col2:
 st.divider()
 
 
-# ==============================================================================
 # ANALYSE TEMPORELLE
-# ==============================================================================
-
 st.header("Analyse Temporelle")
 
 # Tabs pour différentes analyses temporelles
@@ -709,10 +598,7 @@ with tab3:
 st.divider()
 
 
-# ==============================================================================
 # TOP PERFORMERS
-# ==============================================================================
-
 st.header("Top Performers")
 
 col1, col2 = st.columns(2)
@@ -789,10 +675,7 @@ with col2:
 st.divider()
 
 
-# ==============================================================================
 # ALERTES ET RECOMMANDATIONS
-# ==============================================================================
-
 st.header("Alertes et Recommandations")
 
 try:
@@ -848,10 +731,7 @@ try:
             else:
                 st.info(message)
 
-        if recommendations:
-            st.subheader("Recommandations")
-            for i, rec in enumerate(recommendations, 1):
-                st.markdown(f"{i}. {rec}")
+        
 
 except Exception as e:
     st.error(f"Erreur lors de la génération des alertes: {str(e)}")
@@ -859,10 +739,7 @@ except Exception as e:
 st.divider()
 
 
-# ==============================================================================
 # EXPORT
-# ==============================================================================
-
 st.header("Export")
 
 col1, col2 = st.columns(2)
@@ -874,8 +751,8 @@ with col1:
         # Préparer les KPIs pour l'export
         kpis_df = pd.DataFrame([kpis])
 
-        # Convertir en CSV
-        csv_kpis = kpis_df.to_csv(index=False).encode('utf-8')
+        # Convertir en CSV avec la fonction robuste
+        csv_kpis = utils.convert_df_to_csv(kpis_df)
 
         st.download_button(
             label="Télécharger KPIs (CSV)",
@@ -887,7 +764,7 @@ with col1:
 
         # Export des top produits
         if 'top_products' in locals():
-            csv_products = top_products.to_csv(index=False).encode('utf-8')
+            csv_products = utils.convert_df_to_csv(top_products)
             st.download_button(
                 label="Télécharger Top Produits (CSV)",
                 data=csv_products,
@@ -912,9 +789,6 @@ with col2:
     """)
 
 
-# ==============================================================================
 # FOOTER
-# ==============================================================================
-
 st.divider()
 st.caption("Page Overview - Dernière mise à jour : " + datetime.now().strftime("%Y-%m-%d %H:%M"))

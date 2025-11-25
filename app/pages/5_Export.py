@@ -20,10 +20,7 @@ import config
 import utils
 
 
-# ==============================================================================
 # CONFIGURATION DE LA PAGE
-# ==============================================================================
-
 st.set_page_config(
     page_title="Export - Marketing Analytics",
     page_icon=":material/upload:",
@@ -31,10 +28,7 @@ st.set_page_config(
 )
 
 
-# ==============================================================================
 # HELPER FUNCTIONS
-# ==============================================================================
-
 def get_file_size(df):
     """Calculate the approximate file size in MB"""
     size_bytes = df.memory_usage(deep=True).sum()
@@ -48,20 +42,6 @@ def format_file_size(size_mb):
         return f"{size_mb * 1024:.1f} KB"
     else:
         return f"{size_mb:.2f} MB"
-
-
-def convert_df_to_csv(df):
-    """Convert DataFrame to CSV bytes for download"""
-    return df.to_csv(index=False, encoding='utf-8').encode('utf-8')
-
-
-def convert_df_to_excel(df):
-    """Convert DataFrame to Excel bytes for download"""
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Data')
-    return output.getvalue()
-
 
 def create_zip_archive(files_dict):
     """Create a ZIP archive from multiple files
@@ -83,10 +63,7 @@ def create_zip_archive(files_dict):
     return zip_buffer.getvalue()
 
 
-# ==============================================================================
 # EN-TETE DE LA PAGE
-# ==============================================================================
-
 st.title("Export et Téléchargements")
 st.markdown("""
 Exportez vos analyses, visualisations et rapports dans différents formats
@@ -96,19 +73,13 @@ pour les partager ou les intégrer à vos présentations.
 st.divider()
 
 
-# ==============================================================================
 # VERIFICATION DES DONNEES
-# ==============================================================================
-
 if not st.session_state.get('data_loaded', False):
     st.warning("Veuillez d'abord charger les données depuis la page d'accueil.")
     st.stop()
 
 
-# ==============================================================================
 # EXPORTS DE DONNEES
-# ==============================================================================
-
 st.header("Export des Données")
 
 st.markdown("""
@@ -117,15 +88,23 @@ Exportez les datasets traités et les résultats d'analyses au format CSV ou Exc
 
 tab1, tab2, tab3, tab4 = st.tabs(["Données nettoyées", "Analyse RFM", "Analyse Cohortes", "Export groupé"])
 
-# ==============================================================================
 # TAB 1: Données nettoyées
-# ==============================================================================
-
 with tab1:
     st.subheader("Données brutes nettoyées")
 
     # Get data from session state
     df_clean = st.session_state.get('df_clean', pd.DataFrame())
+    if df_clean is None:
+        df_clean = pd.DataFrame()
+
+    # Debug: vérifier si les données sont chargées
+    if df_clean.empty and st.session_state.get('data_loaded', False):
+        st.warning("Les données sont marquées comme chargées mais le DataFrame est vide. Essayez de recharger les données depuis la page d'accueil.")
+
+    # Appliquer les filtres globaux
+    if not df_clean.empty:
+        active_filters = st.session_state.get('active_filters', {})
+        df_clean = utils.apply_global_filters(df_clean, active_filters)
 
     if not df_clean.empty:
         st.markdown(f"""
@@ -166,11 +145,11 @@ with tab1:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         if export_format == "CSV":
-            file_data = convert_df_to_csv(df_to_export)
+            file_data = utils.convert_df_to_csv(df_to_export)
             filename = f"cleaned_data_{timestamp}.csv"
             mime_type = "text/csv"
         else:
-            file_data = convert_df_to_excel(df_to_export)
+            file_data = utils.convert_df_to_excel(df_to_export)
             filename = f"cleaned_data_{timestamp}.xlsx"
             mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -186,15 +165,14 @@ with tab1:
         st.info("Aucune donnée nettoyée disponible")
 
 
-# ==============================================================================
 # TAB 2: Analyse RFM
-# ==============================================================================
-
 with tab2:
     st.subheader("Analyse RFM")
 
     # Get RFM data from session state
     df_rfm = st.session_state.get('df_rfm', pd.DataFrame())
+    if df_rfm is None:
+        df_rfm = pd.DataFrame()
 
     if not df_rfm.empty:
         st.markdown(f"""
@@ -240,11 +218,11 @@ with tab2:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         if export_format_rfm == "CSV":
-            file_data = convert_df_to_csv(df_rfm)
+            file_data = utils.convert_df_to_csv(df_rfm)
             filename = f"rfm_analysis_{timestamp}.csv"
             mime_type = "text/csv"
         else:
-            file_data = convert_df_to_excel(df_rfm)
+            file_data = utils.convert_df_to_excel(df_rfm)
             filename = f"rfm_analysis_{timestamp}.xlsx"
             mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -260,15 +238,14 @@ with tab2:
         st.info("Aucune analyse RFM disponible. Veuillez d'abord accéder à la page Segments.")
 
 
-# ==============================================================================
 # TAB 3: Analyse Cohortes
-# ==============================================================================
-
 with tab3:
     st.subheader("Analyse des Cohortes")
 
     # Get cohort data from session state
     df_cohorts = st.session_state.get('df_cohorts', pd.DataFrame())
+    if df_cohorts is None:
+        df_cohorts = pd.DataFrame()
 
     if not df_cohorts.empty:
         st.markdown(f"""
@@ -306,11 +283,11 @@ with tab3:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         if export_format_cohort == "CSV":
-            file_data = convert_df_to_csv(df_cohorts)
+            file_data = utils.convert_df_to_csv(df_cohorts)
             filename = f"cohort_analysis_{timestamp}.csv"
             mime_type = "text/csv"
         else:
-            file_data = convert_df_to_excel(df_cohorts)
+            file_data = utils.convert_df_to_excel(df_cohorts)
             filename = f"cohort_analysis_{timestamp}.xlsx"
             mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -326,10 +303,7 @@ with tab3:
         st.info("Aucune analyse de cohortes disponible. Veuillez d'abord accéder à la page Cohortes.")
 
 
-# ==============================================================================
 # TAB 4: Export groupé
-# ==============================================================================
-
 with tab4:
     st.subheader("Export groupé (ZIP)")
 
@@ -341,8 +315,17 @@ with tab4:
     available_datasets = []
 
     df_clean = st.session_state.get('df_clean', pd.DataFrame())
+    if df_clean is None:
+        df_clean = pd.DataFrame()
+
     df_rfm = st.session_state.get('df_rfm', pd.DataFrame())
+    if df_rfm is None:
+        df_rfm = pd.DataFrame()
+
     df_cohorts = st.session_state.get('df_cohorts', pd.DataFrame())
+    if df_cohorts is None:
+        df_cohorts = pd.DataFrame()
+
     kpis = st.session_state.get('kpis', {})
 
     if not df_clean.empty:
@@ -385,28 +368,28 @@ with tab4:
                     # Add selected datasets
                     if "Données nettoyées" in datasets_to_export and not df_clean.empty:
                         if export_format_zip == "CSV":
-                            files_dict[f"cleaned_data_{timestamp}.csv"] = convert_df_to_csv(df_clean)
+                            files_dict[f"cleaned_data_{timestamp}.csv"] = utils.convert_df_to_csv(df_clean)
                         else:
-                            files_dict[f"cleaned_data_{timestamp}.xlsx"] = convert_df_to_excel(df_clean)
+                            files_dict[f"cleaned_data_{timestamp}.xlsx"] = utils.convert_df_to_excel(df_clean)
 
                     if "Analyse RFM" in datasets_to_export and not df_rfm.empty:
                         if export_format_zip == "CSV":
-                            files_dict[f"rfm_analysis_{timestamp}.csv"] = convert_df_to_csv(df_rfm)
+                            files_dict[f"rfm_analysis_{timestamp}.csv"] = utils.convert_df_to_csv(df_rfm)
                         else:
-                            files_dict[f"rfm_analysis_{timestamp}.xlsx"] = convert_df_to_excel(df_rfm)
+                            files_dict[f"rfm_analysis_{timestamp}.xlsx"] = utils.convert_df_to_excel(df_rfm)
 
                     if "Analyse Cohortes" in datasets_to_export and not df_cohorts.empty:
                         if export_format_zip == "CSV":
-                            files_dict[f"cohort_analysis_{timestamp}.csv"] = convert_df_to_csv(df_cohorts)
+                            files_dict[f"cohort_analysis_{timestamp}.csv"] = utils.convert_df_to_csv(df_cohorts)
                         else:
-                            files_dict[f"cohort_analysis_{timestamp}.xlsx"] = convert_df_to_excel(df_cohorts)
+                            files_dict[f"cohort_analysis_{timestamp}.xlsx"] = utils.convert_df_to_excel(df_cohorts)
 
                     if "KPIs globaux" in datasets_to_export and kpis:
                         kpis_df = pd.DataFrame([kpis])
                         if export_format_zip == "CSV":
-                            files_dict[f"kpis_{timestamp}.csv"] = convert_df_to_csv(kpis_df)
+                            files_dict[f"kpis_{timestamp}.csv"] = utils.convert_df_to_csv(kpis_df)
                         else:
-                            files_dict[f"kpis_{timestamp}.xlsx"] = convert_df_to_excel(kpis_df)
+                            files_dict[f"kpis_{timestamp}.xlsx"] = utils.convert_df_to_excel(kpis_df)
 
                     # Create ZIP
                     zip_data = create_zip_archive(files_dict)
@@ -432,10 +415,7 @@ with tab4:
 st.divider()
 
 
-# ==============================================================================
 # VISUALISATIONS
-# ==============================================================================
-
 st.header("Export des Visualisations")
 
 st.markdown("""
@@ -450,154 +430,3 @@ Les graphiques Plotly peuvent être exportés directement depuis chaque page :
 st.info("""
 **Astuce:** Pour une qualité optimale, utilisez le format SVG qui est vectoriel et s'adapte à toutes les tailles sans perte de qualité.
 """)
-
-st.divider()
-
-# ==============================================================================
-# LISTE ACTIVABLE CRM
-# ==============================================================================
-
-st.header("Liste Activable CRM")
-
-df_rfm = st.session_state.get("df_rfm", pd.DataFrame())
-
-if not df_rfm.empty:
-
-    st.markdown("""
-    Sélectionnez les segments à inclure dans la **liste activable CRM**.
-    Cette liste contient les clients prêts pour activation marketing.
-    """)
-
-    # Segments activables par défaut
-    # Segments réellement disponibles dans df_rfm
-    segments_available = sorted(df_rfm["Segment"].unique())
-
-    # Segments recommandés par défaut (si disponibles)
-    default_target_segments = ["Champions", "Loyal Customers", "At Risk"]
-
-    # Filtrer pour ne garder que ceux présents dans les options
-    default_segments_filtered = [
-        seg for seg in default_target_segments if seg in segments_available
-    ]
-
-    segs = st.multiselect(
-        "Segments à inclure dans la liste activable",
-        segments_available,
-        default=default_segments_filtered
-    )
-
-    # Construction de la liste activable
-    df_act = df_rfm[df_rfm["Segment"].isin(segs)][[
-        "Customer ID", "Segment", "R_Score", "F_Score", "M_Score",
-        "Recency", "Frequency", "Monetary"
-    ]]
-
-    st.dataframe(df_act, use_container_width=True)
-
-    st.download_button(
-        "Télécharger liste activable (CSV)",
-        df_act.to_csv(index=False).encode("utf-8"),
-        file_name=f"liste_activable_{datetime.now().strftime('%Y%m%d')}.csv",
-        mime="text/csv",
-        use_container_width=True
-    )
-
-else:
-    st.info("Aucune segmentation RFM disponible.")
-
-
-# ==============================================================================
-# INFORMATIONS ET AIDE
-# ==============================================================================
-
-st.header("Informations et Aide")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.subheader("Formats disponibles")
-
-    st.markdown("""
-    **CSV (Comma-Separated Values)**
-    - Format universel, compatible avec tous les outils
-    - Idéal pour Excel, Google Sheets, Python, R
-    - Taille de fichier réduite
-    - Recommandé pour les grands datasets
-
-    **Excel (XLSX)**
-    - Format Microsoft Excel natif
-    - Préserve le formatage
-    - Compatible avec Excel, LibreOffice, Google Sheets
-    - Idéal pour les présentations et rapports
-    """)
-
-with col2:
-    st.subheader("Recommandations")
-
-    st.markdown("""
-    **Pour l'analyse:**
-    - Utilisez CSV pour importer dans Python/R
-    - Exportez les données nettoyées en premier
-
-    **Pour les rapports:**
-    - Utilisez Excel pour les présentations
-    - Exportez les analyses RFM et Cohortes
-    - Utilisez les graphiques en haute résolution
-
-    **Pour partager:**
-    - Utilisez l'export groupé (ZIP)
-    - Inclut toutes les analyses en un seul fichier
-    - Facilite le partage et l'archivage
-    """)
-
-st.divider()
-
-
-# ==============================================================================
-# STATISTIQUES D'EXPORT
-# ==============================================================================
-
-st.header("Statistiques")
-
-col1, col2, col3 = st.columns(3)
-
-df_clean = st.session_state.get('df_clean', pd.DataFrame())
-df_rfm = st.session_state.get('df_rfm', pd.DataFrame())
-df_cohorts = st.session_state.get('df_cohorts', pd.DataFrame())
-
-with col1:
-    datasets_available = 0
-    if not df_clean.empty:
-        datasets_available += 1
-    if not df_rfm.empty:
-        datasets_available += 1
-    if not df_cohorts.empty:
-        datasets_available += 1
-
-    st.metric("Datasets disponibles", datasets_available)
-
-with col2:
-    total_size = 0
-    if not df_clean.empty:
-        total_size += get_file_size(df_clean)
-    if not df_rfm.empty:
-        total_size += get_file_size(df_rfm)
-    if not df_cohorts.empty:
-        total_size += get_file_size(df_cohorts)
-
-    st.metric("Taille totale estimée", format_file_size(total_size))
-
-with col3:
-    total_rows = 0
-    if not df_clean.empty:
-        total_rows += len(df_clean)
-
-    st.metric("Lignes de données", f"{total_rows:,}")
-
-
-# ==============================================================================
-# FOOTER
-# ==============================================================================
-
-st.divider()
-st.caption("Page Export - Dernière mise à jour : " + datetime.now().strftime("%Y-%m-%d %H:%M"))
