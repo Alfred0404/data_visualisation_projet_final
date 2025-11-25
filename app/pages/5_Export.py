@@ -43,31 +43,6 @@ def format_file_size(size_mb):
     else:
         return f"{size_mb:.2f} MB"
 
-
-def convert_df_to_csv(df):
-    """Convert DataFrame to CSV bytes for download"""
-    # Convertir les colonnes Period en string pour l'export
-    df_export = df.copy()
-    for col in df_export.columns:
-        if pd.api.types.is_period_dtype(df_export[col]):
-            df_export[col] = df_export[col].astype(str)
-    return df_export.to_csv(index=False, encoding='utf-8').encode('utf-8')
-
-
-def convert_df_to_excel(df):
-    """Convert DataFrame to Excel bytes for download"""
-    # Convertir les colonnes Period en string pour l'export
-    df_export = df.copy()
-    for col in df_export.columns:
-        if pd.api.types.is_period_dtype(df_export[col]):
-            df_export[col] = df_export[col].astype(str)
-
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df_export.to_excel(writer, index=False, sheet_name='Data')
-    return output.getvalue()
-
-
 def create_zip_archive(files_dict):
     """Create a ZIP archive from multiple files
 
@@ -170,11 +145,11 @@ with tab1:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         if export_format == "CSV":
-            file_data = convert_df_to_csv(df_to_export)
+            file_data = utils.convert_df_to_csv(df_to_export)
             filename = f"cleaned_data_{timestamp}.csv"
             mime_type = "text/csv"
         else:
-            file_data = convert_df_to_excel(df_to_export)
+            file_data = utils.convert_df_to_excel(df_to_export)
             filename = f"cleaned_data_{timestamp}.xlsx"
             mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -243,11 +218,11 @@ with tab2:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         if export_format_rfm == "CSV":
-            file_data = convert_df_to_csv(df_rfm)
+            file_data = utils.convert_df_to_csv(df_rfm)
             filename = f"rfm_analysis_{timestamp}.csv"
             mime_type = "text/csv"
         else:
-            file_data = convert_df_to_excel(df_rfm)
+            file_data = utils.convert_df_to_excel(df_rfm)
             filename = f"rfm_analysis_{timestamp}.xlsx"
             mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -308,11 +283,11 @@ with tab3:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         if export_format_cohort == "CSV":
-            file_data = convert_df_to_csv(df_cohorts)
+            file_data = utils.convert_df_to_csv(df_cohorts)
             filename = f"cohort_analysis_{timestamp}.csv"
             mime_type = "text/csv"
         else:
-            file_data = convert_df_to_excel(df_cohorts)
+            file_data = utils.convert_df_to_excel(df_cohorts)
             filename = f"cohort_analysis_{timestamp}.xlsx"
             mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -393,28 +368,28 @@ with tab4:
                     # Add selected datasets
                     if "Données nettoyées" in datasets_to_export and not df_clean.empty:
                         if export_format_zip == "CSV":
-                            files_dict[f"cleaned_data_{timestamp}.csv"] = convert_df_to_csv(df_clean)
+                            files_dict[f"cleaned_data_{timestamp}.csv"] = utils.convert_df_to_csv(df_clean)
                         else:
-                            files_dict[f"cleaned_data_{timestamp}.xlsx"] = convert_df_to_excel(df_clean)
+                            files_dict[f"cleaned_data_{timestamp}.xlsx"] = utils.convert_df_to_excel(df_clean)
 
                     if "Analyse RFM" in datasets_to_export and not df_rfm.empty:
                         if export_format_zip == "CSV":
-                            files_dict[f"rfm_analysis_{timestamp}.csv"] = convert_df_to_csv(df_rfm)
+                            files_dict[f"rfm_analysis_{timestamp}.csv"] = utils.convert_df_to_csv(df_rfm)
                         else:
-                            files_dict[f"rfm_analysis_{timestamp}.xlsx"] = convert_df_to_excel(df_rfm)
+                            files_dict[f"rfm_analysis_{timestamp}.xlsx"] = utils.convert_df_to_excel(df_rfm)
 
                     if "Analyse Cohortes" in datasets_to_export and not df_cohorts.empty:
                         if export_format_zip == "CSV":
-                            files_dict[f"cohort_analysis_{timestamp}.csv"] = convert_df_to_csv(df_cohorts)
+                            files_dict[f"cohort_analysis_{timestamp}.csv"] = utils.convert_df_to_csv(df_cohorts)
                         else:
-                            files_dict[f"cohort_analysis_{timestamp}.xlsx"] = convert_df_to_excel(df_cohorts)
+                            files_dict[f"cohort_analysis_{timestamp}.xlsx"] = utils.convert_df_to_excel(df_cohorts)
 
                     if "KPIs globaux" in datasets_to_export and kpis:
                         kpis_df = pd.DataFrame([kpis])
                         if export_format_zip == "CSV":
-                            files_dict[f"kpis_{timestamp}.csv"] = convert_df_to_csv(kpis_df)
+                            files_dict[f"kpis_{timestamp}.csv"] = utils.convert_df_to_csv(kpis_df)
                         else:
-                            files_dict[f"kpis_{timestamp}.xlsx"] = convert_df_to_excel(kpis_df)
+                            files_dict[f"kpis_{timestamp}.xlsx"] = utils.convert_df_to_excel(kpis_df)
 
                     # Create ZIP
                     zip_data = create_zip_archive(files_dict)

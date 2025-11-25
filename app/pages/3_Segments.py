@@ -758,26 +758,28 @@ col1, col2 = st.columns(2)
 
 with col1:
     try:
-        # Export RFM complet
-        csv_rfm = df_rfm_full.to_csv(index=False).encode('utf-8')
+        # Export RFM complet avec fonction robuste
+        csv_rfm = utils.convert_df_to_csv(df_rfm_full)
 
         st.download_button(
             label="Télécharger scores RFM (CSV)",
             data=csv_rfm,
             file_name=f"rfm_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
-            use_container_width=True
+            use_container_width=True,
+            type="primary"
         )
 
         # Export du résumé par segment
-        csv_summary = segment_summary.to_csv(index=False).encode('utf-8')
+        csv_summary = utils.convert_df_to_csv(segment_summary)
 
         st.download_button(
             label="Télécharger résumé segments (CSV)",
             data=csv_summary,
             file_name=f"rfm_segments_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
-            use_container_width=True
+            use_container_width=True,
+            type="primary"
         )
 
     except Exception as e:

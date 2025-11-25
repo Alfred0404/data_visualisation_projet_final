@@ -863,6 +863,85 @@ def apply_global_filters(df: pd.DataFrame, filters: dict = None) -> pd.DataFrame
     return df_filtered
 
 
+def prepare_df_for_export(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Prepare un DataFrame pour l'export en convertissant les types problematiques.
+
+    Cette fonction gere:
+    - Les colonnes Period (convertit en string)
+    - Les colonnes datetime (convertit en format ISO)
+    - Les colonnes timedelta (convertit en string)
+    - Les types numpy (convertit en types Python natifs)
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame a preparer pour l'export
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame pret pour l'export
+    """
+    df_export = df.copy()
+
+    for col in df_export.columns:
+        # Convertir les colonnes Period en string
+        if pd.api.types.is_period_dtype(df_export[col]):
+            df_export[col] = df_export[col].astype(str)
+
+        # Convertir les colonnes datetime en string ISO
+        elif pd.api.types.is_datetime64_any_dtype(df_export[col]):
+            df_export[col] = df_export[col].dt.strftime('%Y-%m-%d %H:%M:%S')
+
+        # Convertir les colonnes timedelta en string
+        elif pd.api.types.is_timedelta64_dtype(df_export[col]):
+            df_export[col] = df_export[col].astype(str)
+
+    return df_export
+
+
+def convert_df_to_csv(df: pd.DataFrame) -> bytes:
+    """
+    Convertit un DataFrame en bytes CSV pour telechargement.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame a convertir
+
+    Returns
+    -------
+    bytes
+        Contenu CSV encode en UTF-8
+    """
+    df_export = prepare_df_for_export(df)
+    return df_export.to_csv(index=False, encoding='utf-8').encode('utf-8')
+
+
+def convert_df_to_excel(df: pd.DataFrame) -> bytes:
+    """
+    Convertit un DataFrame en bytes Excel pour telechargement.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame a convertir
+
+    Returns
+    -------
+    bytes
+        Contenu Excel (XLSX)
+    """
+    df_export = prepare_df_for_export(df)
+
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df_export.to_excel(writer, index=False, sheet_name='Data')
+
+    return output.getvalue()
+
+
 if __name__ == "__main__":
     print("Module utils.py - Fonctions utilitaires")
     print("=" * 70)

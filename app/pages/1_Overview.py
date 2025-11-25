@@ -602,8 +602,8 @@ with col1:
         # Préparer les KPIs pour l'export
         kpis_df = pd.DataFrame([kpis])
 
-        # Convertir en CSV
-        csv_kpis = kpis_df.to_csv(index=False).encode('utf-8')
+        # Convertir en CSV avec la fonction robuste
+        csv_kpis = utils.convert_df_to_csv(kpis_df)
 
         st.download_button(
             label="Télécharger KPIs (CSV)",
@@ -615,7 +615,7 @@ with col1:
 
         # Export des top produits
         if 'top_products' in locals():
-            csv_products = top_products.to_csv(index=False).encode('utf-8')
+            csv_products = utils.convert_df_to_csv(top_products)
             st.download_button(
                 label="Télécharger Top Produits (CSV)",
                 data=csv_products,

@@ -811,66 +811,62 @@ st.header("Export des Analyses")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    if st.button("Exporter matrice de retention (CSV)", use_container_width=True):
-        try:
-            # Preparer la matrice pour l'export
-            export_matrix = retention_matrix.copy()
-            export_matrix.index = export_matrix.index.astype(str)
+    st.subheader("Matrice de rétention")
+    try:
+        # Preparer la matrice pour l'export
+        export_matrix = retention_matrix.copy()
+        export_matrix.index = export_matrix.index.astype(str)
 
-            # Convertir en CSV
-            csv = export_matrix.to_csv(sep=config.CSV_SEPARATOR)
+        # Convertir en CSV avec reset_index pour inclure l'index comme colonne
+        csv = export_matrix.reset_index().to_csv(index=False, sep=config.CSV_SEPARATOR).encode('utf-8')
 
-            # Telecharger
-            st.download_button(
-                label="Telecharger CSV",
-                data=csv,
-                file_name=f"matrice_retention_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv"
-            )
-            st.success("Matrice prete a telecharger !")
-        except Exception as e:
-            st.error(f"Erreur lors de l'export : {str(e)}")
+        # Telecharger
+        st.download_button(
+            label="Télécharger matrice (CSV)",
+            data=csv,
+            file_name=f"matrice_retention_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            type="primary"
+        )
+    except Exception as e:
+        st.error(f"Erreur lors de l'export : {str(e)}")
 
 with col2:
-    if st.button("Exporter tableau cohortes (CSV)", use_container_width=True):
-        try:
-            # Convertir en CSV
-            csv = cohort_summary_display.to_csv(index=False, sep=config.CSV_SEPARATOR)
+    st.subheader("Tableau des cohortes")
+    try:
+        # Convertir en CSV
+        csv = utils.convert_df_to_csv(cohort_summary_display)
 
-            # Telecharger
-            st.download_button(
-                label="Telecharger CSV",
-                data=csv,
-                file_name=f"tableau_cohortes_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv"
-            )
-            st.success("Tableau pret a telecharger !")
-        except Exception as e:
-            st.error(f"Erreur lors de l'export : {str(e)}")
+        # Telecharger
+        st.download_button(
+            label="Télécharger tableau (CSV)",
+            data=csv,
+            file_name=f"tableau_cohortes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            type="primary"
+        )
+    except Exception as e:
+        st.error(f"Erreur lors de l'export : {str(e)}")
 
 with col3:
-    if st.button("Exporter donnees completes (CSV)", use_container_width=True):
-        try:
-            # Exporter le dataframe complet des cohortes
-            export_df = df_cohorts_filtered.copy()
+    st.subheader("Données complètes")
+    try:
+        # Exporter le dataframe complet des cohortes avec la fonction robuste
+        csv = utils.convert_df_to_csv(df_cohorts_filtered)
 
-            # Convertir les colonnes Period en string
-            export_df['CohortMonth'] = export_df['CohortMonth'].astype(str)
-            export_df['InvoiceMonth'] = export_df['InvoiceMonth'].astype(str)
-
-            # Convertir en CSV
-            csv = export_df.to_csv(index=False, sep=config.CSV_SEPARATOR)
-
-            # Telecharger
-            st.download_button(
-                label="Telecharger CSV",
-                data=csv,
-                file_name=f"cohortes_complet_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv"
-            )
-            st.success("Donnees pretes a telecharger !")
-        except Exception as e:
-            st.error(f"Erreur lors de l'export : {str(e)}")
+        # Telecharger
+        st.download_button(
+            label="Télécharger données (CSV)",
+            data=csv,
+            file_name=f"cohortes_complet_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            type="primary"
+        )
+    except Exception as e:
+        st.error(f"Erreur lors de l'export : {str(e)}")
 
 
 # FOOTER

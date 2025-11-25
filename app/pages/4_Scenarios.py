@@ -953,8 +953,9 @@ st.header("Export de la Simulation")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    if st.button("Exporter resultats (CSV)", use_container_width=True):
-        if 'simulation_results' in st.session_state:
+    st.subheader("Résultats simulation")
+    if 'simulation_results' in st.session_state:
+        try:
             results = st.session_state.simulation_results
 
             # Creer un DataFrame avec les resultats
@@ -991,34 +992,41 @@ with col1:
 
             export_df = pd.DataFrame(export_data)
 
-            # Convertir en CSV
-            csv = export_df.to_csv(index=False)
+            # Convertir en CSV avec fonction robuste
+            csv = utils.convert_df_to_csv(export_df)
 
             st.download_button(
-                label="Telecharger CSV",
+                label="Télécharger résultats (CSV)",
                 data=csv,
                 file_name=f"simulation_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
-                use_container_width=True
+                use_container_width=True,
+                type="primary"
             )
-        else:
-            st.warning("Aucune simulation a exporter")
+        except Exception as e:
+            st.error(f"Erreur lors de l'export: {str(e)}")
+    else:
+        st.info("Aucune simulation à exporter. Lancez d'abord une simulation ci-dessus.")
 
 with col2:
-    if st.button("Exporter comparaison (CSV)", use_container_width=True):
-        if len(st.session_state.saved_scenarios) > 0:
-            # Exporter le tableau de comparaison
-            csv = comparison_df.to_csv(index=False)
+    st.subheader("Comparaison scénarios")
+    if len(st.session_state.saved_scenarios) > 0:
+        try:
+            # Exporter le tableau de comparaison avec fonction robuste
+            csv = utils.convert_df_to_csv(comparison_df)
 
             st.download_button(
-                label="Telecharger Comparaison CSV",
+                label="Télécharger comparaison (CSV)",
                 data=csv,
                 file_name=f"scenarios_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
-                use_container_width=True
+                use_container_width=True,
+                type="primary"
             )
-        else:
-            st.warning("Aucun scenario sauvegarde a exporter")
+        except Exception as e:
+            st.error(f"Erreur lors de l'export: {str(e)}")
+    else:
+        st.info("Aucun scénario sauvegardé à exporter. Sauvegardez d'abord des scénarios.")
 
 with col3:
     if st.button("Guide d'interpretation", use_container_width=True):
