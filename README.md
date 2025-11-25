@@ -39,7 +39,7 @@ Export CSV/Excel des analyses et telechargement des visualisations.
 1. Cloner le depot :
 ```bash
 git clone https://github.com/Alfred0404/data_visualisation_projet_final.git
-cd projet_final
+cd data_visualisation_projet_final
 ```
 
 2. Installer les dependances :
