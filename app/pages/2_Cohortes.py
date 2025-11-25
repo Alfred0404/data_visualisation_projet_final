@@ -101,40 +101,20 @@ df = st.session_state.get('df_clean', None)
 if df is None:
     st.error("Erreur lors du chargement des donnees")
     st.stop()
-# ============================================================
-# APPLICATION DES FILTRES GLOBAUX (obligatoire)
-# ============================================================
 
-active_filters = st.session_state.get("active_filters", {})
-filters_dict = {}
-
-# Période globale
-date_range = active_filters.get("date_range")
-if date_range and len(date_range) == 2:
-    filters_dict["start_date"] = date_range[0]
-    filters_dict["end_date"] = date_range[1]
-
-# Pays
-countries = active_filters.get("countries")
-if countries:
-    filters_dict["countries"] = countries
-
-# Seuil minimum montant
-min_amount = active_filters.get("min_amount")
-if min_amount is not None:
-    filters_dict["min_amount"] = min_amount
-
-# Mode retours / Type client / Unité de temps
-filters_dict["returns_mode"] = st.session_state.get("returns_mode", "Inclure")
-filters_dict["customer_type"] = st.session_state.get("customer_type", "Tous")
-filters_dict["unit_of_time"] = st.session_state.get("unit_of_time", "M")
-
-# Application des filtres globaux
-df = utils.apply_filters(df, filters_dict)
+# APPLICATION DES FILTRES GLOBAUX
 
 # Appliquer les filtres globaux
 active_filters = st.session_state.get('active_filters', {})
-df = utils.apply_global_filters(df, active_filters)
+if active_filters:
+    df = utils.apply_global_filters(df, active_filters)
+
+# Gérer le mode retours
+returns_mode = st.session_state.get('returns_mode', 'Inclure')
+if returns_mode == "Exclure":
+    df = df[~df['IsReturn']].copy()
+elif returns_mode == "Neutraliser":
+    pass  
 
 # FILTRES SPECIFIQUES
 # Filtrer les donnees avec CustomerID pour l'analyse de cohortes
@@ -201,33 +181,6 @@ with st.spinner("Creation des cohortes en cours..."):
 cohort_sizes = df_cohorts.groupby('CohortMonth')['Customer ID'].nunique()
 valid_cohorts = cohort_sizes[cohort_sizes >= min_cohort_size].index
 df_cohorts_filtered = df_cohorts[df_cohorts['CohortMonth'].isin(valid_cohorts)].copy()
-# ============================================================
-# AFFICHAGE DES FILTRES ACTIFS (UX obligatoire)
-# ============================================================
-
-with st.expander("Filtres actifs appliqués", expanded=True):
-    start = filters_dict.get("start_date")
-    end = filters_dict.get("end_date")
-
-    periode_txt = (
-        f"{start.strftime('%Y-%m-%d')} → {end.strftime('%Y-%m-%d')}"
-        if (start and end)
-        else "Toute la période"
-    )
-
-    pays_txt = ", ".join(filters_dict.get("countries", [])) \
-        if filters_dict.get("countries") else "Tous"
-
-    seuil_txt = f"{min_amount:,}" if min_amount else "Aucun"
-
-    st.markdown(f"""
-    **Période d'analyse** : `{periode_txt}`  
-    **Pays** : `{pays_txt}`  
-    **Seuil minimum de transaction** : `{seuil_txt}`  
-    **Mode retours** : `{filters_dict.get("returns_mode")}`  
-    **Type client** : `{filters_dict.get("customer_type")}`  
-    **Unité de temps** : `{filters_dict.get("unit_of_time")}`  
-    """)
 
 # Statistiques des cohortes
 num_cohorts = df_cohorts_filtered['CohortMonth'].nunique()

@@ -255,45 +255,26 @@ if not st.session_state.get('data_loaded', False):
 st.header("Calcul des Scores RFM")
 
 df = st.session_state.get('df_clean', None)
-# ======================================================================
-# APPLICATION DES FILTRES GLOBAUX (OBLIGATOIRE)
-# ======================================================================
 
-active_filters = st.session_state.get("active_filters", {})
-filters_dict = {}
+# APPLICATION DES FILTRES GLOBAUX
 
-# Période globale
-date_range = active_filters.get("date_range")
-if date_range and len(date_range) == 2:
-    filters_dict["start_date"] = date_range[0]
-    filters_dict["end_date"] = date_range[1]
+# Appliquer les filtres globaux
+active_filters = st.session_state.get('active_filters', {})
+if active_filters:
+    df = utils.apply_global_filters(df, active_filters)
 
-# Pays
-countries = active_filters.get("countries")
-if countries:
-    filters_dict["countries"] = countries
+# Gérer le mode retours
+returns_mode = st.session_state.get('returns_mode', 'Inclure')
+if returns_mode == "Exclure":
+    df = df[~df['IsReturn']].copy()
+elif returns_mode == "Neutraliser":
+    pass  
 
-# Seuil montant
-min_amount = active_filters.get("min_amount")
-if min_amount is not None:
-    filters_dict["min_amount"] = min_amount
-
-# Mode retours / type client / unité de temps
-filters_dict["returns_mode"] = st.session_state.get("returns_mode", "Inclure")
-filters_dict["customer_type"] = st.session_state.get("customer_type", "Tous")
-filters_dict["unit_of_time"] = st.session_state.get("unit_of_time", "M")
-
-# Application des filtres
-df = utils.apply_filters(df, filters_dict)
-# ======================================================================
 # DATE RFM AVEC BORNES CALCULÉES SUR LE DATASET FILTRÉ
-# ======================================================================
 
-df_preview = df.copy()
-
-if not df_preview.empty:
-    dataset_min_date = df_preview["InvoiceDate"].min().date()
-    dataset_max_date = df_preview["InvoiceDate"].max().date()
+if not df.empty:
+    dataset_min_date = df["InvoiceDate"].min().date()
+    dataset_max_date = df["InvoiceDate"].max().date()
 else:
     dataset_min_date = datetime(2000, 1, 1).date()
     dataset_max_date = datetime.now().date()
@@ -313,39 +294,7 @@ st.session_state["rfm_reference_date"] = reference_date
 
 st.sidebar.divider()
 
-# ======================================================================
-# AFFICHAGE DES FILTRES ACTIFS (UX OBLIGATOIRE)
-# ======================================================================
-
-with st.expander("Filtres actifs appliqués", expanded=True):
-    start = filters_dict.get("start_date")
-    end = filters_dict.get("end_date")
-
-    periode_txt = (
-        f"{start.strftime('%Y-%m-%d')} → {end.strftime('%Y-%m-%d')}"
-        if (start and end)
-        else "Toute la période"
-    )
-
-    pays_txt = ", ".join(filters_dict.get("countries", [])) \
-        if filters_dict.get("countries") else "Tous"
-
-    seuil_txt = f"{min_amount:,}" if min_amount else "Aucun"
-
-    st.markdown(f"""
-    **Période d'analyse** : `{periode_txt}`  
-    **Pays** : `{pays_txt}`  
-    **Seuil minimum de transaction** : `{seuil_txt}`  
-    **Mode retours** : `{filters_dict.get("returns_mode")}`  
-    **Type client** : `{filters_dict.get("customer_type")}`  
-    **Unité de temps** : `{filters_dict.get("unit_of_time")}`  
-    """)
-
 if df is not None:
-    # Appliquer les filtres globaux
-    active_filters = st.session_state.get('active_filters', {})
-    df = utils.apply_global_filters(df, active_filters)
-
     try:
         # Calculer RFM avec cache
         with st.spinner("Calcul des scores RFM en cours..."):

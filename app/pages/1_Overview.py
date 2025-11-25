@@ -36,8 +36,6 @@ Cette page présente une vue synthétique de vos principaux indicateurs de perfo
 et l'évolution de votre activité commerciale, en tenant compte des **filtres globaux**.
 """)
 
-st.divider()
-
 
 # VERIFICATION DES DONNEES
 if not st.session_state.get('data_loaded', False):
@@ -50,23 +48,31 @@ if df_clean is None:
     st.stop()
 
 # Appliquer les filtres globaux
-df, filters_used = get_filtered_df()
+df = df_clean.copy()
+active_filters = st.session_state.get('active_filters', {})
+if active_filters:
+    df = utils.apply_global_filters(df, active_filters)
+
+# Gérer le mode retours
+returns_mode = st.session_state.get('returns_mode', 'Inclure')
+if returns_mode == "Exclure":
+    df = df[~df['IsReturn']].copy()
+elif returns_mode == "Neutraliser":
+    # Neutraliser les retours (soustraire les montants négatifs)
+    pass  # Les retours sont déjà marqués avec IsReturn, on les traite dans les calculs
 
 if df is None or df.empty:
     st.error("Les filtres sélectionnés ne retournent aucune donnée. Essayez d'élargir le périmètre.")
     st.stop()
-
-# Affichage des filtres actifs
-render_active_filters(filters_used, n_rows=len(df), n_total_rows=len(df_clean))
 # Badge si retours exclus
 if st.session_state.get("returns_mode") == "Exclure":
     st.markdown(
-        "<span style='background-color:#ffcccc; padding:6px 12px; border-radius:6px; color:#b30000; font-weight:bold;'>🔁 Retours exclus</span>",
+        "<span style='background-color:#ffcccc; padding:6px 12px; border-radius:6px; color:#b30000; font-weight:bold;'>Retours exclus</span>",
         unsafe_allow_html=True
     )
 elif st.session_state.get("returns_mode") == "Neutraliser":
     st.markdown(
-        "<span style='background-color:#e6f2ff; padding:6px 12px; border-radius:6px; color:#004080; font-weight:bold;'>➖ Retours neutralisés (CA net)</span>",
+        "<span style='background-color:#e6f2ff; padding:6px 12px; border-radius:6px; color:#004080; font-weight:bold;'>Retours neutralisés (CA net)</span>",
         unsafe_allow_html=True
     )
 
@@ -77,21 +83,11 @@ st.divider()
 st.header("KPIs Principaux")
 
 # Recalcule les KPIs sur le périmètre filtré
-kpis = st.session_state.get('kpis', {})
 kpis = utils.calculate_kpis(df)
 st.session_state.kpis = kpis
 
-if df is not None:
-    # Appliquer les filtres globaux
-    active_filters = st.session_state.get('active_filters', {})
-    df = utils.apply_global_filters(df, active_filters)
-    kpis = st.session_state.get('kpis', {})
-    if not kpis:
-        kpis = utils.calculate_kpis(df)
-        st.session_state.kpis = kpis
-
-# North Star simple : CA moyen par client (sur la période filtrée)
-north_star = kpis['total_revenue'] / total_customers if total_customers > 0 else 0
+# Extraire les valeurs des KPIs
+total_customers = kpis.get('total_customers', 0)
 
 # Ligne 1 de KPIs
 col1, col2, col3, col4 = st.columns(4)
@@ -194,79 +190,8 @@ with col4:
         )
     )
 
-st.divider()
-
-# Ligne 3 : North Star
-col1, _, _, _ = st.columns(4)
-with col1:
-    st.metric(
-        label="North Star – CA moyen par client",
-        value=utils.format_currency(north_star),
-        help=(
-            "Indicateur North Star simple : CA total / nombre de clients "
-            "sur le périmètre filtré.\n\n"
-            "Exemple : 120 000 £ de CA pour 1 000 clients ⇒ 120 £ par client."
-        )
-    )
 
 st.divider()
-# ==============================================================================
-# GESTION DES VALEURS MANQUANTES & OUTLIERS
-# ==============================================================================
-
-with st.expander("ℹ️ Gestion des valeurs manquantes & outliers", expanded=False):
-    st.markdown("""
-    Les données affichées dans cette page sont automatiquement traitées selon les règles suivantes :
-
-    **1. Valeurs manquantes**
-    - Suppression des lignes avec `InvoiceDate` ou `Customer ID` manquants.
-    - Nettoyage des descriptions manquantes lorsque nécessaire.
-
-    **2. Retours**
-    - Traités selon votre sélection : **Inclure**, **Exclure**, ou **Neutraliser** (CA net).
-
-    **3. Outliers**
-    - Limitation des valeurs extrêmes via une winsorisation légère (ex. 1ᵉʳ et 99ᵉ percentiles).
-    - Exemple : une transaction exceptionnelle de 50 000£ est ramenée à un seuil raisonnable.
-
-    Ces traitements garantissent des KPIs stables, interprétables et conformes aux bonnes pratiques analytiques.
-    """)
-
-# ======================================================================
-# KPI Taille des Segments RFM
-# ======================================================================
-
-df_rfm = st.session_state.get("df_rfm", None)
-
-if df_rfm is not None and not df_rfm.empty:
-
-    st.header("Segmentation RFM – Volumes clés")
-
-    seg_counts = df_rfm["Segment"].value_counts()
-
-    colA, colB = st.columns(2)
-
-    with colA:
-        st.metric(
-            label="Champions",
-            value=f"{seg_counts.get('Champions', 0):,}",
-            help=(
-                "Nombre de clients Champions (R=4, F=4, M=4).\n"
-                "Ce sont vos meilleurs clients : fréquents, actifs et dépensiers."
-            )
-        )
-
-    with colB:
-        st.metric(
-            label="Clients \"At Risk\"",
-            value=f"{seg_counts.get('At Risk', 0):,}",
-            help=(
-                "Clients dont la récence est faible mais qui dépensaient beaucoup.\n"
-                "Ce segment doit être réactivé en priorité."
-            )
-        )
-
-    st.divider()
 
 
 # VISUALISATIONS PRINCIPALES
