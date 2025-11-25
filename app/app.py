@@ -47,6 +47,19 @@ def init_session_state():
     if 'kpis' not in st.session_state:
         st.session_state.kpis = {}
 
+    # Paramètres avancés globaux (pour respecter le périmètre fonctionnel)
+    # - unité de temps (mois / trimestre)
+    # - mode retours (inclure / exclure / neutraliser)
+    # - type client (placeholder si pas dans les données)
+    if 'unit_of_time' not in st.session_state:
+        st.session_state.unit_of_time = "Mois"
+
+    if 'returns_mode' not in st.session_state:
+        st.session_state.returns_mode = "Inclure"
+
+    if 'customer_type' not in st.session_state:
+        st.session_state.customer_type = "Tous"
+
 
 @st.cache_data(show_spinner="Chargement des donnees en cours...")
 def load_and_cache_data(file_path):
@@ -87,7 +100,9 @@ def render_sidebar():
 
         st.divider()
 
-        # Filtres globaux
+        # ----------------------------------------------------------------------
+        # Filtres globaux "de base"
+        # ----------------------------------------------------------------------
         st.subheader("Filtres globaux")
 
         if st.session_state.data_loaded and st.session_state.df_clean is not None:
@@ -100,27 +115,78 @@ def render_sidebar():
                 value=(min_date, max_date),
                 min_value=min_date,
                 max_value=max_date,
+                help="Période d'analyse des transactions (fenêtre temporelle)."
             )
 
             all_countries = df_clean['Country'].unique()
             selected_countries = st.multiselect(
                 "Selection de pays",
                 options=all_countries,
-                default=st.session_state.active_filters.get('countries', list(all_countries))
+                default=st.session_state.active_filters.get(
+                    'countries',
+                    all_countries
+                ),
+                help="Filtrer l'analyse sur un ou plusieurs pays."
             )
 
             min_amount = st.slider(
-                "Montant minimum de transaction",
+                "Seuil de commande (montant minimum)",
                 min_value=0,
                 max_value=int(df_clean['TotalAmount'].max()),
-                value=st.session_state.active_filters.get('min_amount', 0)
+                value=st.session_state.active_filters.get('min_amount', 0),
+                help="Exclure les très petites commandes (bruit) sous ce montant."
             )
 
+            # ------------------------------------------------------------------
+            # Paramètres avancés globaux (pour coller au périmètre fonctionnel)
+            # ------------------------------------------------------------------
+            st.subheader("Paramètres avancés")
+
+            # Unité de temps (mois / trimestre) utilisée dans les pages
+            unit_of_time = st.radio(
+                "Unité de temps",
+                ["Mois", "Trimestre"],
+                key="unit_of_time_radio",
+                index=["Mois", "Trimestre"].index(st.session_state.unit_of_time),
+                help="Définit la granularité temporelle des analyses (ex. courbes, cohortes)."
+            )
+
+            # Mode retours : inclure / exclure / neutraliser
+            returns_mode = st.radio(
+                "Mode retours",
+                ["Inclure", "Exclure", "Neutraliser"],
+                key="returns_mode_radio",
+                index=["Inclure", "Exclure", "Neutraliser"].index(st.session_state.returns_mode),
+                help=(
+                    "Inclure : les retours sont comptés négativement dans le CA.\n"
+                    "Exclure : les retours sont retirés du périmètre.\n"
+                    "Neutraliser : CA net (achats - retours), avec badge à afficher dans les pages."
+                )
+            )
+
+            # Type client (placeholder si pas encore présent dans les données)
+            customer_type = st.selectbox(
+                "Type de client",
+                ["Tous", "B2C", "B2B"],
+                index=["Tous", "B2C", "B2B"].index(st.session_state.customer_type),
+                help="Filtrer selon le type de clients si disponible dans les données."
+            )
+
+            # Sauvegarde dans l'état de session (accès direct depuis les pages)
+            st.session_state.unit_of_time = unit_of_time
+            st.session_state.returns_mode = returns_mode
+            st.session_state.customer_type = customer_type
+
+            # Sauvegarde également dans active_filters pour utils.apply_filters() & co
             st.session_state.active_filters = {
                 'date_range': date_range,
                 'countries': selected_countries,
-                'min_amount': min_amount
+                'min_amount': min_amount,
+                'unit_of_time': unit_of_time,
+                'returns_mode': returns_mode,
+                'customer_type': customer_type
             }
+
         else:
             st.info("Chargez les donnees pour voir les filtres.")
 
@@ -191,7 +257,7 @@ def render_home_page():
         """)
 
         st.info("""
-        **Astuce**
+        ℹ️ **Astuce**
 
         Utilisez les filtres globaux dans la barre laterale pour affiner
         vos analyses sur toutes les pages.
@@ -212,28 +278,38 @@ def render_home_page():
             st.metric(
                 label="Clients totaux",
                 value=f"{kpis['total_customers']:,}",
-                delta=None
+                delta=None,
+                help=(
+                    "Nombre total de clients uniques ayant au moins une transaction "
+                    "sur toute la période disponible."
+                )
             )
 
         with col2:
             st.metric(
                 label="Revenu total",
                 value=utils.format_currency(kpis['total_revenue']),
-                delta=None
+                delta=None,
+                help="Chiffre d'affaires total (achats - retours si neutralisation)."
             )
 
         with col3:
             st.metric(
                 label="Panier moyen",
                 value=utils.format_currency(kpis['avg_order_value']),
-                delta=None
+                delta=None,
+                help="Montant moyen par transaction (CA / nombre de commandes)."
             )
 
         with col4:
             st.metric(
                 label="Taux de retention",
                 value=utils.format_percentage(kpis['retention_rate']),
-                delta=None
+                delta=None,
+                help=(
+                    "Proportion de clients ayant réalisé au moins 2 commandes "
+                    "sur la période."
+                )
             )
 
     else:

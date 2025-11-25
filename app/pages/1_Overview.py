@@ -33,7 +33,7 @@ st.set_page_config(
 st.title("Vue d'ensemble - KPIs Marketing")
 st.markdown("""
 Cette page présente une vue synthétique de vos principaux indicateurs de performance
-et l'évolution de votre activité commerciale.
+et l'évolution de votre activité commerciale, en tenant compte des **filtres globaux**.
 """)
 
 st.divider()
@@ -44,11 +44,42 @@ if not st.session_state.get('data_loaded', False):
     st.warning("Veuillez d'abord charger les données depuis la page d'accueil.")
     st.stop()
 
+df_clean = st.session_state.get('df_clean', None)
+if df_clean is None:
+    st.error("Erreur : aucune donnée nettoyée trouvée en mémoire.")
+    st.stop()
+
+# Appliquer les filtres globaux
+df, filters_used = get_filtered_df()
+
+if df is None or df.empty:
+    st.error("Les filtres sélectionnés ne retournent aucune donnée. Essayez d'élargir le périmètre.")
+    st.stop()
+
+# Affichage des filtres actifs
+render_active_filters(filters_used, n_rows=len(df), n_total_rows=len(df_clean))
+# Badge si retours exclus
+if st.session_state.get("returns_mode") == "Exclure":
+    st.markdown(
+        "<span style='background-color:#ffcccc; padding:6px 12px; border-radius:6px; color:#b30000; font-weight:bold;'>🔁 Retours exclus</span>",
+        unsafe_allow_html=True
+    )
+elif st.session_state.get("returns_mode") == "Neutraliser":
+    st.markdown(
+        "<span style='background-color:#e6f2ff; padding:6px 12px; border-radius:6px; color:#004080; font-weight:bold;'>➖ Retours neutralisés (CA net)</span>",
+        unsafe_allow_html=True
+    )
+
+st.divider()
+
 
 # KPIS PRINCIPAUX
 st.header("KPIs Principaux")
 
-df = st.session_state.get('df_clean', None)
+# Recalcule les KPIs sur le périmètre filtré
+kpis = st.session_state.get('kpis', {})
+kpis = utils.calculate_kpis(df)
+st.session_state.kpis = kpis
 
 if df is not None:
     # Appliquer les filtres globaux
@@ -59,76 +90,183 @@ if df is not None:
         kpis = utils.calculate_kpis(df)
         st.session_state.kpis = kpis
 
-    # Ligne 1 de KPIs
-    col1, col2, col3, col4 = st.columns(4)
+# North Star simple : CA moyen par client (sur la période filtrée)
+north_star = kpis['total_revenue'] / total_customers if total_customers > 0 else 0
 
-    with col1:
+# Ligne 1 de KPIs
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.metric(
+        label="Clients Totaux",
+        value=f"{total_customers:,}",
+        help=(
+            "Nombre total de clients uniques ayant au moins une transaction "
+            "sur le périmètre filtré.\n\n"
+            "Exemple : si 3 clients ont chacun passé au moins une commande, "
+            "le KPI affiche 3."
+        )
+    )
+
+with col2:
+    st.metric(
+        label="Clients Actifs (90 jours)",
+        value=f"{kpis.get('active_customers', 0):,}",
+        help=(
+            "Nombre de clients ayant effectué au moins une transaction "
+            "dans les 90 derniers jours de la période.\n\n"
+            "Exemple : si 50 clients ont acheté au cours des 90 derniers jours, "
+            "le KPI affiche 50."
+        )
+    )
+
+with col3:
+    st.metric(
+        label="Revenu Total",
+        value=utils.format_currency(kpis.get('total_revenue', 0)),
+        help=(
+            "Chiffre d'affaires généré (hors retours) sur le périmètre filtré.\n\n"
+            "Exemple : si la somme des montants de vente est 120 000, "
+            "le KPI affiche environ 120 000 £."
+        )
+    )
+
+with col4:
+    st.metric(
+        label="Panier Moyen",
+        value=utils.format_currency(kpis.get('avg_order_value', 0)),
+        help=(
+            "Valeur moyenne d'une transaction (AOV = CA total / nombre de transactions).\n\n"
+            "Exemple : 10 000 £ de CA pour 100 commandes ⇒ panier moyen = 100 £."
+        )
+    )
+
+st.divider()
+
+# Ligne 2 de KPIs
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.metric(
+        label="Fréquence d'Achat",
+        value=f"{kpis.get('purchase_frequency', 0):.2f}",
+        help=(
+            "Nombre moyen de transactions par client "
+            "sur la période filtrée (transactions / clients).\n\n"
+            "Exemple : 200 commandes pour 100 clients ⇒ fréquence = 2."
+        )
+    )
+
+with col2:
+    retention_rate = kpis.get('retention_rate', 0)
+    st.metric(
+        label="Taux de Rétention",
+        value=utils.format_percentage(retention_rate),
+        help=(
+            f"Proportion de clients ayant réalisé au moins 2 transactions "
+            f"sur la période (n = {total_customers} clients).\n\n"
+            "Exemple : 30 clients sur 100 reviennent au moins une fois ⇒ 30%."
+        )
+    )
+
+with col3:
+    churn_rate = utils.calculate_churn_rate(df)
+    st.metric(
+        label="Taux de Churn (inactivité)",
+        value=utils.format_percentage(churn_rate),
+        delta_color="inverse",
+        help=(
+            f"Part des clients qui n'ont plus acheté depuis au moins 6 mois "
+            f"(n = {total_customers} clients).\n\n"
+            "Exemple : 20 clients sur 100 n'ont rien acheté depuis 6 mois ⇒ 20%."
+        )
+    )
+
+with col4:
+    st.metric(
+        label="CLV Moyenne (baseline)",
+        value=utils.format_currency(kpis.get('avg_clv', 0)),
+        help=(
+            "Estimation de la Customer Lifetime Value moyenne par client, "
+            "calculée à partir du panier moyen, de la fréquence et de la rétention.\n\n"
+            "Exemple illustratif : panier moyen 50 £, fréquence 3/an, "
+            "rétention 40% ⇒ CLV ≈ quelques centaines de £."
+        )
+    )
+
+st.divider()
+
+# Ligne 3 : North Star
+col1, _, _, _ = st.columns(4)
+with col1:
+    st.metric(
+        label="North Star – CA moyen par client",
+        value=utils.format_currency(north_star),
+        help=(
+            "Indicateur North Star simple : CA total / nombre de clients "
+            "sur le périmètre filtré.\n\n"
+            "Exemple : 120 000 £ de CA pour 1 000 clients ⇒ 120 £ par client."
+        )
+    )
+
+st.divider()
+# ==============================================================================
+# GESTION DES VALEURS MANQUANTES & OUTLIERS
+# ==============================================================================
+
+with st.expander("ℹ️ Gestion des valeurs manquantes & outliers", expanded=False):
+    st.markdown("""
+    Les données affichées dans cette page sont automatiquement traitées selon les règles suivantes :
+
+    **1. Valeurs manquantes**
+    - Suppression des lignes avec `InvoiceDate` ou `Customer ID` manquants.
+    - Nettoyage des descriptions manquantes lorsque nécessaire.
+
+    **2. Retours**
+    - Traités selon votre sélection : **Inclure**, **Exclure**, ou **Neutraliser** (CA net).
+
+    **3. Outliers**
+    - Limitation des valeurs extrêmes via une winsorisation légère (ex. 1ᵉʳ et 99ᵉ percentiles).
+    - Exemple : une transaction exceptionnelle de 50 000£ est ramenée à un seuil raisonnable.
+
+    Ces traitements garantissent des KPIs stables, interprétables et conformes aux bonnes pratiques analytiques.
+    """)
+
+# ======================================================================
+# KPI Taille des Segments RFM
+# ======================================================================
+
+df_rfm = st.session_state.get("df_rfm", None)
+
+if df_rfm is not None and not df_rfm.empty:
+
+    st.header("Segmentation RFM – Volumes clés")
+
+    seg_counts = df_rfm["Segment"].value_counts()
+
+    colA, colB = st.columns(2)
+
+    with colA:
         st.metric(
-            label="Clients Totaux",
-            value=f"{kpis.get('total_customers', 0):,}",
-            help="Nombre total de clients uniques"
+            label="Champions",
+            value=f"{seg_counts.get('Champions', 0):,}",
+            help=(
+                "Nombre de clients Champions (R=4, F=4, M=4).\n"
+                "Ce sont vos meilleurs clients : fréquents, actifs et dépensiers."
+            )
         )
 
-    with col2:
+    with colB:
         st.metric(
-            label="Revenu Total",
-            value=utils.format_currency(kpis.get('total_revenue', 0)),
-            help="Chiffre d'affaires total sur la période"
-        )
-
-    with col3:
-        st.metric(
-            label="Panier Moyen",
-            value=utils.format_currency(kpis.get('avg_order_value', 0)),
-            help="Valeur moyenne d'une transaction (AOV)"
-        )
-
-    with col4:
-        st.metric(
-            label="Fréquence d'Achat",
-            value=f"{kpis.get('purchase_frequency', 0):.2f}",
-            help="Nombre moyen de transactions par client"
+            label="Clients \"At Risk\"",
+            value=f"{seg_counts.get('At Risk', 0):,}",
+            help=(
+                "Clients dont la récence est faible mais qui dépensaient beaucoup.\n"
+                "Ce segment doit être réactivé en priorité."
+            )
         )
 
     st.divider()
-
-    # Ligne 2 de KPIs
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        st.metric(
-            label="Taux de Rétention",
-            value=utils.format_percentage(kpis.get('retention_rate', 0)),
-            help="Pourcentage de clients qui reviennent"
-        )
-
-    with col2:
-        churn_rate = utils.calculate_churn_rate(df)
-        st.metric(
-            label="Taux de Churn",
-            value=utils.format_percentage(churn_rate),
-            delta_color="inverse",
-            help="Pourcentage de clients perdus"
-        )
-
-    with col3:
-        st.metric(
-            label="CLV Moyenne",
-            value=utils.format_currency(kpis.get('avg_clv', 0)),
-            help="Customer Lifetime Value moyenne"
-        )
-
-    with col4:
-        st.metric(
-            label="Transactions",
-            value=f"{kpis.get('total_transactions', 0):,}",
-            help="Nombre total de transactions"
-        )
-
-else:
-    st.error("Erreur lors du chargement des données")
-
-st.divider()
 
 
 # VISUALISATIONS PRINCIPALES
@@ -151,6 +289,7 @@ with col2:
     fig.update_layout(xaxis_title="Mois", yaxis_title="Nombre de clients")
     st.plotly_chart(fig, use_container_width=True)
 
+st.caption(f"n = {df['Customer ID'].nunique():,} clients uniques sur la période filtrée.")
 st.divider()
 
 
@@ -165,12 +304,22 @@ with col1:
     fig = px.bar(df_country_revenue, x='TotalAmount', y='Country', orientation='h', title="Top 10 des pays par revenu")
     fig.update_layout(xaxis_title="Revenu", yaxis_title="Pays")
     st.plotly_chart(fig, use_container_width=True)
+    st.caption(f"n = {df_country_revenue['Country'].nunique():,} pays (Top 10 affichés).")
 
 with col2:
     st.subheader("Distribution des clients")
     df_country_customers = df.groupby('Country')['Customer ID'].nunique().nlargest(10).reset_index()
-    fig = px.pie(df_country_customers, values='Customer ID', names='Country', title="Distribution des clients par pays (Top 10)")
+    fig = px.pie(
+        df_country_customers,
+        values='Customer ID',
+        names='Country',
+        title="Distribution des clients par pays (Top 10)"
+    )
     st.plotly_chart(fig, use_container_width=True)
+    st.caption(
+        f"n = {df['Customer ID'].nunique():,} clients uniques. "
+        "La part affichée correspond aux 10 pays principaux."
+    )
 
 st.divider()
 
@@ -440,7 +589,7 @@ with tab3:
             st.metric(
                 label="Prévision M+1",
                 value=utils.format_currency(forecast_next_month),
-                help="Prévision pour le mois prochain"
+                help="Prévision pour le mois prochain (baseline, avant scénarios)."
             )
 
     except Exception as e:
@@ -549,7 +698,7 @@ try:
     else:
         alerts.append(("success", f"Taux de rétention satisfaisant: {utils.format_percentage(retention_rate)}"))
 
-    # Analyser la tendance du revenu
+    # Analyser la tendance du revenu (3 derniers mois vs 3 mois précédents)
     df_last_3m = df[df['InvoiceDate'] >= (df['InvoiceDate'].max() - pd.Timedelta(days=90))]
     df_prev_3m = df[(df['InvoiceDate'] >= (df['InvoiceDate'].max() - pd.Timedelta(days=180))) &
                     (df['InvoiceDate'] < (df['InvoiceDate'].max() - pd.Timedelta(days=90)))]
@@ -566,7 +715,7 @@ try:
             alerts.append(("success", f"Forte croissance du revenu: +{revenue_change:.1f}%"))
             recommendations.append("Capitaliser sur cette dynamique positive avec des promotions ciblées")
         else:
-            alerts.append(("info", f"Revenu stable: {revenue_change:+.1f}%"))
+            alerts.append(("info", f"Revenu globalement stable: {revenue_change:+.1f}% (3 derniers mois vs 3 mois précédents)"))
 
     # Afficher les alertes
     with st.expander("État de santé des KPIs", expanded=True):
@@ -631,11 +780,12 @@ with col2:
     st.subheader("Informations")
     st.info("""
     **Exports disponibles:**
-    - KPIs au format CSV
+    - KPIs au format CSV (calculés sur le périmètre filtré)
     - Top 10 Produits
     - Top 10 Clients
 
-    Pour exporter les visualisations, utilisez le menu de Plotly (icône appareil photo) en haut à droite de chaque graphique.
+    Pour exporter les visualisations, utilisez le menu de Plotly (icône appareil photo)
+    en haut à droite de chaque graphique.
     """)
 
 

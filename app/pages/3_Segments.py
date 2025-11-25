@@ -180,6 +180,18 @@ st.set_page_config(
 
 # EN-TETE DE LA PAGE
 st.title("Segmentation RFM")
+# Badge selon le mode retours actif
+if st.session_state.get("returns_mode") == "Exclure":
+    st.markdown(
+        "<span style='background-color:#ffcccc; padding:6px 12px; border-radius:6px; color:#b30000; font-weight:bold;'>🔁 Retours exclus</span>",
+        unsafe_allow_html=True
+    )
+elif st.session_state.get("returns_mode") == "Neutraliser":
+    st.markdown(
+        "<span style='background-color:#e6f2ff; padding:6px 12px; border-radius:6px; color:#004080; font-weight:bold;'>➖ Retours neutralisés (CA net)</span>",
+        unsafe_allow_html=True
+    )
+
 st.markdown("""
 La segmentation RFM (Recency, Frequency, Monetary) permet d'identifier
 les clients les plus précieux et de personnaliser les stratégies marketing.
@@ -230,13 +242,7 @@ st.divider()
 with st.sidebar:
     st.subheader("Filtres - RFM")
 
-    reference_date = st.date_input(
-        "Date de référence pour le calcul RFM",
-        value=datetime.now().date(),
-        help="Date à partir de laquelle calculer la récence"
-    )
 
-    st.divider()
 
 
 # VERIFICATION DES DONNEES
@@ -249,6 +255,91 @@ if not st.session_state.get('data_loaded', False):
 st.header("Calcul des Scores RFM")
 
 df = st.session_state.get('df_clean', None)
+# ======================================================================
+# APPLICATION DES FILTRES GLOBAUX (OBLIGATOIRE)
+# ======================================================================
+
+active_filters = st.session_state.get("active_filters", {})
+filters_dict = {}
+
+# Période globale
+date_range = active_filters.get("date_range")
+if date_range and len(date_range) == 2:
+    filters_dict["start_date"] = date_range[0]
+    filters_dict["end_date"] = date_range[1]
+
+# Pays
+countries = active_filters.get("countries")
+if countries:
+    filters_dict["countries"] = countries
+
+# Seuil montant
+min_amount = active_filters.get("min_amount")
+if min_amount is not None:
+    filters_dict["min_amount"] = min_amount
+
+# Mode retours / type client / unité de temps
+filters_dict["returns_mode"] = st.session_state.get("returns_mode", "Inclure")
+filters_dict["customer_type"] = st.session_state.get("customer_type", "Tous")
+filters_dict["unit_of_time"] = st.session_state.get("unit_of_time", "M")
+
+# Application des filtres
+df = utils.apply_filters(df, filters_dict)
+# ======================================================================
+# DATE RFM AVEC BORNES CALCULÉES SUR LE DATASET FILTRÉ
+# ======================================================================
+
+df_preview = df.copy()
+
+if not df_preview.empty:
+    dataset_min_date = df_preview["InvoiceDate"].min().date()
+    dataset_max_date = df_preview["InvoiceDate"].max().date()
+else:
+    dataset_min_date = datetime(2000, 1, 1).date()
+    dataset_max_date = datetime.now().date()
+
+reference_date = st.sidebar.date_input(
+    "Date de référence pour le calcul RFM",
+    value=dataset_max_date,
+    min_value=dataset_min_date,
+    max_value=dataset_max_date,
+    help=(
+        "La date la plus récente après application des filtres.\n"
+        "La récence est calculée à partir de cette date."
+    )
+)
+
+st.session_state["rfm_reference_date"] = reference_date
+
+st.sidebar.divider()
+
+# ======================================================================
+# AFFICHAGE DES FILTRES ACTIFS (UX OBLIGATOIRE)
+# ======================================================================
+
+with st.expander("Filtres actifs appliqués", expanded=True):
+    start = filters_dict.get("start_date")
+    end = filters_dict.get("end_date")
+
+    periode_txt = (
+        f"{start.strftime('%Y-%m-%d')} → {end.strftime('%Y-%m-%d')}"
+        if (start and end)
+        else "Toute la période"
+    )
+
+    pays_txt = ", ".join(filters_dict.get("countries", [])) \
+        if filters_dict.get("countries") else "Tous"
+
+    seuil_txt = f"{min_amount:,}" if min_amount else "Aucun"
+
+    st.markdown(f"""
+    **Période d'analyse** : `{periode_txt}`  
+    **Pays** : `{pays_txt}`  
+    **Seuil minimum de transaction** : `{seuil_txt}`  
+    **Mode retours** : `{filters_dict.get("returns_mode")}`  
+    **Type client** : `{filters_dict.get("customer_type")}`  
+    **Unité de temps** : `{filters_dict.get("unit_of_time")}`  
+    """)
 
 if df is not None:
     # Appliquer les filtres globaux
@@ -258,9 +349,10 @@ if df is not None:
     try:
         # Calculer RFM avec cache
         with st.spinner("Calcul des scores RFM en cours..."):
-            df_rfm = calculate_rfm_cached(df)
-            st.session_state.df_rfm = df_rfm
+            df_rfm = utils.calculate_rfm(df)
 
+        # 🔥 Sauvegarde RFM pour les autres pages (Export, Scénarios, Overview)
+        st.session_state["df_rfm"] = df_rfm
         # Jointure avec les données originales pour avoir le revenu
         df_customers = df[df['HasCustomerID']].copy()
         customer_revenue = df_customers.groupby('Customer ID')['TotalAmount'].sum().reset_index()
@@ -310,6 +402,33 @@ if df is not None:
 else:
     st.error("Erreur lors du chargement des données")
     st.stop()
+# ======================================================================
+# AJOUT KPIs : Panier moyen global + CLV globale (baseline)
+# ======================================================================
+
+df_customers = df[df['HasCustomerID']].copy()
+
+total_transactions = df_customers['Invoice'].nunique()
+total_revenue = df_customers['TotalAmount'].sum()
+
+panier_moyen_global = total_revenue / total_transactions if total_transactions else 0
+clv_globale = total_revenue / df_customers['Customer ID'].nunique()
+
+colA, colB = st.columns(2)
+
+with colA:
+    st.metric(
+        label="Panier Moyen Global",
+        value=f"£{panier_moyen_global:,.2f}",
+        help="CA total / nombre de transactions"
+    )
+
+with colB:
+    st.metric(
+        label="CLV Globale (baseline)",
+        value=f"£{clv_globale:,.2f}",
+        help="CA total / nombre de clients"
+    )
 
 st.divider()
 
@@ -649,6 +768,25 @@ try:
     segment_summary.columns = ['Segment', 'Nb_Clients', 'R_Moyen', 'F_Moyen', 'M_Moyen',
                                 'Recency_Moy', 'Frequency_Moy', 'Monetary_Moy',
                                 'Revenue_Total', 'Revenue_Moyen']
+    # === AJOUT CLV + MARCHE + PRIORITÉ ===
+
+    # Marge par défaut (peut être remplacée plus tard par un filtre/scénario)
+    margin_pct = 0.40
+
+    # CLV estimée simple : CA total / nombre de clients
+    segment_summary["CLV_Estimée"] = (
+            segment_summary["Revenue_Total"] / segment_summary["Nb_Clients"]
+    )
+
+    # Marge totale générée par segment
+    segment_summary["Marge_Totale"] = (
+            segment_summary["Revenue_Total"] * margin_pct
+    )
+
+    # Priorité stratégique issue des recommandations par segment
+    segment_summary["Priorité"] = segment_summary["Segment"].apply(
+        lambda s: get_segment_recommendations(s)["priority"]
+    )
 
     # Calculer le pourcentage
     segment_summary['Pct_Clients'] = (segment_summary['Nb_Clients'] / segment_summary['Nb_Clients'].sum()) * 100
