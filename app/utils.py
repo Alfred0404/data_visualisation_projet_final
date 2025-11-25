@@ -686,6 +686,22 @@ def calculate_kpis(df: pd.DataFrame) -> Dict[str, Union[float, int]]:
     # CLV moyenne (basée sur la formule simple)
     avg_clv = (avg_order_value * purchase_frequency) / (1 - retention_rate + 0.1) if retention_rate < 0.9 else avg_order_value * purchase_frequency * 10
 
+    # NORTH STAR METRIC : Revenu à 90 jours par nouveau client
+
+    # Calculer la valeur moyenne par client sur 90 jours (proxy pour nouveaux clients)
+    if 'CohortIndex' in df_sales.columns and 'CohortMonth' in df_sales.columns:
+        # Filtrer les transactions des 3 premiers mois (≈90 jours)
+        early_customers = df_sales[df_sales['CohortIndex'] <= 2].copy()
+        if len(early_customers) > 0:
+            # Revenu moyen par client sur leurs 90 premiers jours
+            revenue_by_customer = early_customers.groupby('Customer ID')['TotalAmount'].sum()
+            north_star_metric = revenue_by_customer.mean()
+        else:
+            # Fallback si pas de données cohortes
+            north_star_metric = total_revenue / total_customers if total_customers > 0 else 0
+    else:
+        north_star_metric = avg_clv * 0.25 if avg_clv > 0 else (total_revenue / total_customers if total_customers > 0 else 0)
+
     # Construire le dictionnaire de KPIs
     kpis = {
         'total_customers': int(total_customers),
@@ -698,7 +714,8 @@ def calculate_kpis(df: pd.DataFrame) -> Dict[str, Union[float, int]]:
         'retention_rate_m3': float(retention_rate_m3),
         'return_rate': float(return_rate),
         'active_customers': int(active_customers),
-        'avg_clv': float(avg_clv)
+        'avg_clv': float(avg_clv),
+        'north_star_metric': float(north_star_metric)  # North Star : Revenu à 90j par nouveau client
     }
 
     return kpis

@@ -106,13 +106,13 @@ with col1:
 
 with col2:
     st.metric(
-        label="Clients Actifs (90 jours)",
-        value=f"{kpis.get('active_customers', 0):,}",
+        label="North Star - Revenu 90j/client",
+        value=utils.format_currency(kpis.get('north_star_metric', 0)),
         help=(
-            "Nombre de clients ayant effectué au moins une transaction "
-            "dans les 90 derniers jours de la période.\n\n"
-            "Exemple : si 50 clients ont acheté au cours des 90 derniers jours, "
-            "le KPI affiche 50."
+            "Revenu moyen généré par un nouveau client "
+            "durant ses 90 premiers jours.\n\n"
+            "Cette métrique combine acquisition ET rétention court-terme, "
+            "mesurant la capacité à créer de la valeur dès le début de la relation client.\n\n"
         )
     )
 
@@ -190,6 +190,86 @@ with col4:
         )
     )
 
+
+st.divider()
+
+# SECTION : CLARIFICATION DES DEUX APPROCHES CLV
+st.header("Méthodologie CLV : Deux Approches Complémentaires")
+
+st.markdown("""
+La **Customer Lifetime Value (CLV)** peut être calculée selon deux approches distinctes,
+chacune ayant ses avantages et cas d'usage.
+""")
+
+col_clv1, col_clv2 = st.columns(2)
+
+with col_clv1:
+    st.subheader("1-CLV Empirique (Basée sur Cohortes)")
+
+    st.markdown("""
+    **Principe :** Utilise les données historiques réelles des cohortes pour calculer
+    la valeur moyenne générée par client sur sa durée de vie observée.
+
+    **Formule :**
+    ```
+    CLV empirique = CA total du client / Nombre de clients
+
+    Ou par cohorte :
+    CLV cohorte = Σ (Revenu mois M) / Taille cohorte initiale
+    """)
+
+    # Calculer la CLV empirique pour affichage
+    clv_empirique = kpis.get('total_revenue', 0) / kpis.get('total_customers', 1)
+    st.metric(
+        label="CLV Empirique (actuelle)",
+        value=utils.format_currency(clv_empirique),
+        help="Revenu total / Nombre de clients sur la période observée"
+    )
+
+with col_clv2:
+    st.subheader("2-CLV Prédictive (Formule Fermée)")
+
+    st.markdown("""
+    **Principe :** Utilise une formule mathématique avec des paramètres clés
+    pour projeter la valeur future d'un client.
+
+    **Formule :**
+    ```
+    CLV = (AOV × Fréquence) × (r / (1 + d - r))
+
+    Où :
+    - AOV = Average Order Value (panier moyen)
+    - Fréquence = Nombre de transactions par période
+    - r = Taux de rétention (0-1)
+    - d = Taux d'actualisation (discount rate)
+    ```
+    """)
+
+    # Paramètres actuels pour la formule
+    aov = kpis.get('avg_order_value', 0)
+    freq = kpis.get('purchase_frequency', 0)
+    r = kpis.get('retention_rate', 0.3)
+    d = config.DEFAULT_DISCOUNT_RATE
+
+    # Calculer CLV prédictive
+    if r < 0.9 and (1 + d - r) > 0:
+        clv_predictive = (aov * freq) * (r / (1 + d - r))
+    else:
+        clv_predictive = aov * freq * 10  # Fallback si r trop élevé
+
+    st.metric(
+        label="CLV Prédictive (formule)",
+        value=utils.format_currency(clv_predictive),
+        help=f"Calculée avec r={r:.1%}, d={d:.1%}"
+    )
+
+    st.info(f"""
+    **Paramètres actuels :**
+    - Panier moyen (AOV) : {utils.format_currency(aov)}
+    - Fréquence : {freq:.2f} achats/client
+    - Rétention (r) : {r:.1%}
+    - Actualisation (d) : {d:.1%}
+    """)
 
 st.divider()
 
