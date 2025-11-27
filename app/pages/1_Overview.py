@@ -213,9 +213,6 @@ with col_clv1:
     **Formule :**
     ```
     CLV empirique = CA total du client / Nombre de clients
-
-    Ou par cohorte :
-    CLV cohorte = Σ (Revenu mois M) / Taille cohorte initiale
     """)
 
     # Calculer la CLV empirique pour affichage
