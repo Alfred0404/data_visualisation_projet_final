@@ -295,6 +295,109 @@ st.caption(f"n = {df['Customer ID'].nunique():,} clients uniques sur la période
 st.divider()
 
 
+# ANALYSE TEMPORELLE DÉTAILLÉE
+st.subheader("Analyse temporelle détaillée")
+
+# Layout en 3 colonnes
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown("#### Transactions par heure")
+    # Transactions par heure
+    hourly_transactions = df.groupby('Hour')['Invoice'].nunique().reset_index()
+    hourly_transactions.columns = ['Hour', 'Transactions']
+
+    fig = px.line(
+        hourly_transactions,
+        x='Hour',
+        y='Transactions',
+        markers=True,
+        title="Nombre de transactions par heure"
+    )
+    fig.update_layout(
+        xaxis_title="Heure de la journée",
+        yaxis_title="Nombre de transactions",
+        height=350,
+        showlegend=False
+    )
+    fig.update_traces(line_color='#6A4C93', marker=dict(size=8))
+    st.plotly_chart(fig, use_container_width=True)
+
+with col2:
+    st.markdown("#### Revenu par heure")
+    # Revenu par heure
+    hourly_revenue = df.groupby('Hour')['TotalAmount'].sum().reset_index()
+    hourly_revenue.columns = ['Hour', 'Revenue']
+
+    fig = px.bar(
+        hourly_revenue,
+        x='Hour',
+        y='Revenue',
+        title="Revenu par heure"
+    )
+    fig.update_layout(
+        xaxis_title="Heure de la journée",
+        yaxis_title="Revenu (£)",
+        height=350,
+        showlegend=False
+    )
+    fig.update_traces(marker_color='#F18F01')
+    st.plotly_chart(fig, use_container_width=True)
+
+with col3:
+    st.markdown("#### Transactions par jour")
+    # Transactions par jour de la semaine
+    dow_transactions = df.groupby('DayOfWeek')['Invoice'].nunique().reset_index()
+    dow_transactions.columns = ['DayOfWeek', 'Transactions']
+    dow_names = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+    dow_transactions['DayName'] = dow_transactions['DayOfWeek'].apply(lambda x: dow_names[x])
+
+    fig = px.bar(
+        dow_transactions,
+        x='DayName',
+        y='Transactions',
+        title="Transactions par jour de la semaine"
+    )
+    fig.update_layout(
+        xaxis_title="Jour de la semaine",
+        yaxis_title="Nombre de transactions",
+        height=350,
+        showlegend=False
+    )
+    fig.update_traces(marker_color='#D62246')
+    st.plotly_chart(fig, use_container_width=True)
+
+# Insights temporels
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    peak_hour = hourly_transactions.loc[hourly_transactions['Transactions'].idxmax(), 'Hour']
+    st.metric(
+        label="Heure de pointe",
+        value=f"{int(peak_hour)}h",
+        help=f"Heure avec le plus de transactions"
+    )
+
+with col2:
+    peak_hour_revenue = hourly_revenue.loc[hourly_revenue['Revenue'].idxmax(), 'Hour']
+    peak_revenue = hourly_revenue['Revenue'].max()
+    st.metric(
+        label="Heure la plus rentable",
+        value=f"{int(peak_hour_revenue)}h",
+        help=f"Revenu: {utils.format_currency(peak_revenue)}"
+    )
+
+with col3:
+    best_day = dow_transactions.loc[dow_transactions['Transactions'].idxmax(), 'DayName']
+    st.metric(
+        label="Meilleur jour",
+        value=best_day,
+        help="Jour avec le plus de transactions"
+    )
+
+st.divider()
+
+
 # ANALYSE PAR PAYS
 st.header("Répartition Géographique")
 
