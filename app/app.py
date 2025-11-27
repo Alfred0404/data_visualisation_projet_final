@@ -47,18 +47,10 @@ def init_session_state():
     if 'kpis' not in st.session_state:
         st.session_state.kpis = {}
 
-    # Paramètres avancés globaux (pour respecter le périmètre fonctionnel)
-    # - unité de temps (mois / trimestre)
+    # Paramètres avancés globaux
     # - mode retours (inclure / exclure / neutraliser)
-    # - type client (placeholder si pas dans les données)
-    if 'unit_of_time' not in st.session_state:
-        st.session_state.unit_of_time = "Mois"
-
     if 'returns_mode' not in st.session_state:
         st.session_state.returns_mode = "Inclure"
-
-    if 'customer_type' not in st.session_state:
-        st.session_state.customer_type = "Tous"
 
 
 @st.cache_data(show_spinner="Chargement des donnees en cours...")
@@ -138,18 +130,9 @@ def render_sidebar():
             )
 
             # ------------------------------------------------------------------
-            # Paramètres avancés globaux (pour coller au périmètre fonctionnel)
+            # Paramètres avancés globaux
             # ------------------------------------------------------------------
             st.subheader("Paramètres avancés")
-
-            # Unité de temps (mois / trimestre) utilisée dans les pages
-            unit_of_time = st.radio(
-                "Unité de temps",
-                ["Mois", "Trimestre"],
-                key="unit_of_time_radio",
-                index=["Mois", "Trimestre"].index(st.session_state.unit_of_time),
-                help="Définit la granularité temporelle des analyses (ex. courbes, cohortes)."
-            )
 
             # Mode retours : inclure / exclure / neutraliser
             returns_mode = st.radio(
@@ -164,27 +147,15 @@ def render_sidebar():
                 )
             )
 
-            # Type client (placeholder si pas encore présent dans les données)
-            customer_type = st.selectbox(
-                "Type de client",
-                ["Tous", "B2C", "B2B"],
-                index=["Tous", "B2C", "B2B"].index(st.session_state.customer_type),
-                help="Filtrer selon le type de clients si disponible dans les données."
-            )
-
             # Sauvegarde dans l'état de session (accès direct depuis les pages)
-            st.session_state.unit_of_time = unit_of_time
             st.session_state.returns_mode = returns_mode
-            st.session_state.customer_type = customer_type
 
             # Sauvegarde également dans active_filters pour utils.apply_filters() & co
             st.session_state.active_filters = {
                 'date_range': date_range,
                 'countries': selected_countries,
                 'min_amount': min_amount,
-                'unit_of_time': unit_of_time,
-                'returns_mode': returns_mode,
-                'customer_type': customer_type
+                'returns_mode': returns_mode
             }
 
         else:
