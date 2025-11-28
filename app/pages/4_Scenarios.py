@@ -571,44 +571,26 @@ else:
     col1, col2 = st.columns([2, 1])
 
     with col1:
-        st.markdown("#### Parametres Financiers")
+        st.markdown("#### Parametres de Projection")
 
-        col_a, col_b = st.columns(2)
-
-        with col_a:
-            forecast_months = st.number_input(
-                "Periode de projection (mois)",
-                min_value=3,
-                max_value=36,
-                value=12,
-                step=3,
-                help="Duree de la projection en mois"
-            )
-
-        with col_b:
-            strategy_cost = st.number_input(
-                "Cout estime de la strategie (£)",
-                min_value=0,
-                max_value=1000000,
-                value=50000,
-                step=10000,
-                help="Investissement necessaire pour atteindre ces objectifs"
-            )
+        forecast_months = st.number_input(
+            "Periode de projection (mois)",
+            min_value=3,
+            max_value=36,
+            value=12,
+            step=3,
+            help="Duree de la projection en mois"
+        )
 
     with col2:
         # --- Options avancées ---
         st.markdown("#### Options avancées")
 
         discount_rate = st.slider(
-            "Taux d’actualisation (d)",
+            "Taux d'actualisation",
             min_value=0.0, max_value=0.30, value=0.10, step=0.01,
-            help="Actualisation utilisée pour la CLV (formule fermée)."
-        )
-
-        returns_override = st.checkbox(
-            "Inclure retours dans la simulation",
-            value=True,
-            help="Si décoché, les retours sont exclus pour la simulation."
+            format="%.2f",
+            help="Taux d'actualisation pour le calcul de la CLV. Valeur standard : 10% (0.10). Plus le taux est élevé, plus la valeur future des revenus est réduite."
         )
 
         # Choix cohorte cible (si données cohortes disponibles)
@@ -632,11 +614,7 @@ else:
                 'margin_pct': margin_pct / 100,
                 'discount_pct': discount_pct / 100,
                 'forecast_months': forecast_months,
-                'strategy_cost': strategy_cost,
-
-                # --- AJOUTS OBLIGATOIRES ---
                 'discount_rate': discount_rate,
-                'returns_override': returns_override,
                 'target_cohort': target_cohort
             }
             st.session_state.current_scenario = 'custom'
@@ -680,7 +658,7 @@ if 'simulation_params' in st.session_state and st.session_state.simulation_param
         st.metric(
             label="Revenu projete",
             value=format_currency(results['projected']['revenue']),
-            delta=format_currency(results['delta']['revenue']),
+            delta=f"{results['delta']['revenue']:,.0f}",
             delta_color="normal",
             help="Revenu total apres application du scenario"
         )
@@ -689,15 +667,19 @@ if 'simulation_params' in st.session_state and st.session_state.simulation_param
         st.metric(
             label="Clients projetes",
             value=format_number(results['projected']['customers']),
-            delta=f"+{results['delta']['customers']:,.0f}",
+            delta=f"{results['delta']['customers']:,.0f}",
+            delta_color="normal",
             help="Nombre de clients apres croissance"
         )
 
     with col3:
+        # Calculer le delta CLV et détecter le signe pour l'affichage
+        clv_delta = results['delta']['clv']
         st.metric(
             label="CLV projetee",
             value=format_currency(results['projected']['clv']),
-            delta=format_currency(results['delta']['clv']),
+            delta=f"{clv_delta:,.0f}",  # Pas de £ mais Streamlit gère le signe correctement
+            delta_color="normal",
             help="Customer Lifetime Value moyenne projetee"
         )
 

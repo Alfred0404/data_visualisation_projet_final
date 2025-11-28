@@ -559,8 +559,8 @@ def simulate_scenario(df: pd.DataFrame, params: Dict) -> Dict:
     repeat_customers = (customer_transaction_counts > 1).sum()
     current_retention_rate = repeat_customers / current_customers if current_customers > 0 else config.DEFAULT_RETENTION_RATE
 
-    # Calculer la CLV actuelle
-    current_discount_rate = config.DEFAULT_DISCOUNT_RATE
+    # Calculer la CLV actuelle avec le taux d'actualisation personnalisé ou par défaut
+    current_discount_rate = params.get('discount_rate', config.DEFAULT_DISCOUNT_RATE)
     current_monthly_revenue = current_revenue / 12  # Approximation
     current_clv = current_monthly_revenue * (current_retention_rate / (1 + current_discount_rate - current_retention_rate))
 
