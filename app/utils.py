@@ -554,21 +554,30 @@ def simulate_scenario(df: pd.DataFrame, params: Dict) -> Dict:
     current_aov = current_revenue / current_transactions if current_transactions > 0 else 0
     current_frequency = current_transactions / current_customers if current_customers > 0 else 0
 
+    # Calculer le taux de rétention réel (clients qui reviennent au moins une fois)
+    customer_transaction_counts = df_target.groupby('Customer ID')['Invoice'].nunique()
+    repeat_customers = (customer_transaction_counts > 1).sum()
+    current_retention_rate = repeat_customers / current_customers if current_customers > 0 else config.DEFAULT_RETENTION_RATE
+
     # Calculer la CLV actuelle
-    current_retention_rate = config.DEFAULT_RETENTION_RATE
     current_discount_rate = config.DEFAULT_DISCOUNT_RATE
     current_monthly_revenue = current_revenue / 12  # Approximation
     current_clv = current_monthly_revenue * (current_retention_rate / (1 + current_discount_rate - current_retention_rate))
 
+    # Calculer le taux de rétention projeté d'abord (nécessaire pour les autres calculs)
+    projected_retention_rate = min(current_retention_rate + retention_delta, 0.95)  # Cap à 95%
+
+    # Impact de la rétention sur la fréquence d'achat
+    # Une meilleure rétention signifie que les clients achètent plus fréquemment
+    # Multiplieur basé sur le changement de rétention : si rétention +10%, fréquence +5%
+    retention_impact_on_frequency = 1 + (retention_delta * 0.5)
+
     # Projections avec les changements
     projected_customers = current_customers * (1 + customer_growth)
     projected_aov = current_aov * (1 + aov_increase) * (1 - discount_pct)
-    projected_frequency = current_frequency * (1 + frequency_increase)
+    projected_frequency = current_frequency * (1 + frequency_increase) * retention_impact_on_frequency
     projected_transactions = projected_customers * projected_frequency
     projected_revenue = projected_aov * projected_transactions
-
-    # CLV projetée
-    projected_retention_rate = min(current_retention_rate + retention_delta, 0.95)  # Cap à 95%
     projected_monthly_revenue = projected_revenue / 12
     projected_clv = projected_monthly_revenue * (projected_retention_rate / (1 + current_discount_rate - projected_retention_rate))
 
