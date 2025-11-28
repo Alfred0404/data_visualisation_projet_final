@@ -159,14 +159,6 @@ with st.sidebar:
         help="Exclure les cohortes avec moins de N clients"
     )
 
-    # Type de visualisation
-    st.markdown("#### Options de visualisation")
-    show_percentages = st.checkbox(
-        "Afficher en pourcentage",
-        value=True,
-        help="Afficher les taux de retention en % ou en nombres absolus"
-    )
-
     st.divider()
 
 
