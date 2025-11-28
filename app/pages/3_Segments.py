@@ -180,17 +180,6 @@ st.set_page_config(
 
 # EN-TETE DE LA PAGE
 st.title("Segmentation RFM")
-# Badge selon le mode retours actif
-if st.session_state.get("returns_mode") == "Exclure":
-    st.markdown(
-        "<span style='background-color:#ffcccc; padding:6px 12px; border-radius:6px; color:#b30000; font-weight:bold;'>🔁 Retours exclus</span>",
-        unsafe_allow_html=True
-    )
-elif st.session_state.get("returns_mode") == "Neutraliser":
-    st.markdown(
-        "<span style='background-color:#e6f2ff; padding:6px 12px; border-radius:6px; color:#004080; font-weight:bold;'>➖ Retours neutralisés (CA net)</span>",
-        unsafe_allow_html=True
-    )
 
 st.markdown("""
 La segmentation RFM (Recency, Frequency, Monetary) permet d'identifier
@@ -262,13 +251,6 @@ df = st.session_state.get('df_clean', None)
 active_filters = st.session_state.get('active_filters', {})
 if active_filters:
     df = utils.apply_global_filters(df, active_filters)
-
-# Gérer le mode retours
-returns_mode = st.session_state.get('returns_mode', 'Inclure')
-if returns_mode == "Exclure":
-    df = df[~df['IsReturn']].copy()
-elif returns_mode == "Neutraliser":
-    pass  
 
 # DATE RFM AVEC BORNES CALCULÉES SUR LE DATASET FILTRÉ
 

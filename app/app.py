@@ -129,33 +129,11 @@ def render_sidebar():
                 help="Exclure les très petites commandes (bruit) sous ce montant."
             )
 
-            # ------------------------------------------------------------------
-            # Paramètres avancés globaux
-            # ------------------------------------------------------------------
-            st.subheader("Paramètres avancés")
-
-            # Mode retours : inclure / exclure / neutraliser
-            returns_mode = st.radio(
-                "Mode retours",
-                ["Inclure", "Exclure", "Neutraliser"],
-                key="returns_mode_radio",
-                index=["Inclure", "Exclure", "Neutraliser"].index(st.session_state.returns_mode),
-                help=(
-                    "Inclure : les retours sont comptés négativement dans le CA.\n"
-                    "Exclure : les retours sont retirés du périmètre.\n"
-                    "Neutraliser : CA net (achats - retours), avec badge à afficher dans les pages."
-                )
-            )
-
-            # Sauvegarde dans l'état de session (accès direct depuis les pages)
-            st.session_state.returns_mode = returns_mode
-
-            # Sauvegarde également dans active_filters pour utils.apply_filters() & co
+            # Sauvegarde dans active_filters
             st.session_state.active_filters = {
                 'date_range': date_range,
                 'countries': selected_countries,
-                'min_amount': min_amount,
-                'returns_mode': returns_mode
+                'min_amount': min_amount
             }
 
         else:
