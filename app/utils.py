@@ -22,7 +22,7 @@ import config
 
 def load_data(file_path: Union[str, Path], verbose: bool = False) -> pd.DataFrame:
     """
-    Charge les données depuis un fichier Excel.
+    Charge les données depuis un fichier Excel en lisant toutes les feuilles.
 
     Parameters
     ----------
@@ -34,7 +34,7 @@ def load_data(file_path: Union[str, Path], verbose: bool = False) -> pd.DataFram
     Returns
     -------
     pd.DataFrame
-        DataFrame contenant les données chargées
+        DataFrame contenant les données combinées de toutes les feuilles
 
     Raises
     ------
@@ -57,11 +57,33 @@ def load_data(file_path: Union[str, Path], verbose: bool = False) -> pd.DataFram
         print(f"Chargement du fichier: {file_path.name}")
 
     try:
-        df = pd.read_excel(
-            file_path,
-            dtype={'Customer ID': str, 'Invoice': str, 'StockCode': str},
-            engine='openpyxl' if extension == '.xlsx' else None
-        )
+        # Lire toutes les feuilles du fichier Excel
+        excel_file = pd.ExcelFile(file_path, engine='openpyxl' if extension == '.xlsx' else None)
+        sheet_names = excel_file.sheet_names
+
+        if verbose:
+            print(f"Feuilles trouvées: {sheet_names}")
+
+        # Lire chaque feuille et les combiner
+        dataframes = []
+        for sheet_name in sheet_names:
+            if verbose:
+                print(f"Lecture de la feuille: {sheet_name}")
+
+            df_sheet = pd.read_excel(
+                file_path,
+                sheet_name=sheet_name,
+                dtype={'Customer ID': str, 'Invoice': str, 'StockCode': str},
+                engine='openpyxl' if extension == '.xlsx' else None
+            )
+
+            if verbose:
+                print(f"  {sheet_name}: {df_sheet.shape[0]:,} lignes")
+
+            dataframes.append(df_sheet)
+
+        # Combiner toutes les feuilles
+        df = pd.concat(dataframes, ignore_index=True)
 
         if 'InvoiceDate' in df.columns and df['InvoiceDate'].dtype != 'datetime64[ns]':
             df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'], errors='coerce')
@@ -76,7 +98,7 @@ def load_data(file_path: Union[str, Path], verbose: bool = False) -> pd.DataFram
                 df[col] = pd.to_numeric(df[col], errors='coerce')
 
         if verbose:
-            print(f"Chargement réussi: {df.shape[0]:,} lignes x {df.shape[1]} colonnes")
+            print(f"Chargement réussi: {df.shape[0]:,} lignes x {df.shape[1]} colonnes (toutes feuilles combinées)")
 
         return df
 
