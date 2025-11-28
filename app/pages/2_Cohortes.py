@@ -693,10 +693,9 @@ for period in [1, 3, 6, 12]:
     col_name = f'Retention_M{period}'
     if period in retention_matrix.columns:
         # Mapper les valeurs de retention
-        retention_dict = retention_matrix[period].to_dict()
-        cohort_summary[col_name] = cohort_summary['CohortMonth'].apply(
-            lambda x: retention_dict.get(pd.Period(x, freq='M'), np.nan)
-        )
+        # retention_matrix.index contient des Period, cohort_summary['CohortMonth'] contient des strings
+        retention_dict = {str(k): v for k, v in retention_matrix[period].items()}
+        cohort_summary[col_name] = cohort_summary['CohortMonth'].map(retention_dict)
     else:
         cohort_summary[col_name] = np.nan
 

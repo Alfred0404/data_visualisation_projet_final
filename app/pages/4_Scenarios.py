@@ -612,8 +612,8 @@ else:
         )
 
         # Choix cohorte cible (si données cohortes disponibles)
-        df_cohorts = st.session_state.get("df_cohorts", pd.DataFrame())
-        if not df_cohorts.empty:
+        df_cohorts = st.session_state.get("df_cohorts", None)
+        if df_cohorts is not None and not df_cohorts.empty:
             cohort_options = ["Toutes"] + sorted(df_cohorts["CohortMonth"].unique())
             target_cohort = st.selectbox("Cohorte cible", cohort_options)
         else:
